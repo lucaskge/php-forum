@@ -2,8 +2,6 @@
 /storage/logs/*
 !/storage/logs/.gitkeep
 /storage/installed.lock
-/storage/cache/*
-!/storage/cache/.gitkeep
 /public/uploads/avatars/*
 !/public/uploads/avatars/.gitkeep
 .idea/

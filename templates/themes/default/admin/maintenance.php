@@ -53,11 +53,5 @@
             <button type="submit" class="btn btn-small">Expire lapsed suspensions</button>
         </form>
 
-        <form action="<?= $this->e($this->route('admin.maintenance.task')) ?>" method="post">
-            <?= $this->csrf() ?>
-            <input type="hidden" name="task" value="clear-cache">
-            <p class="muted">Delete the <?= $this->number($cache_files) ?> file(s) in storage/cache.</p>
-            <button type="submit" class="btn btn-small">Clear cache directory</button>
-        </form>
     </div>
 </section>

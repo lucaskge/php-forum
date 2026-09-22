@@ -44,7 +44,6 @@ final class SystemController extends Controller
             'paths' => Config::get('app.paths'),
             'writable' => [
                 'storage/logs' => is_writable((string) Config::get('app.paths.logs')),
-                'storage/cache' => is_writable((string) Config::get('app.paths.cache')),
                 'public/uploads/avatars' => is_writable((string) Config::get('uploads.avatars.directory')),
             ],
             'limits' => [
@@ -108,7 +107,6 @@ final class SystemController extends Controller
         return $this->render('admin/maintenance', [
             'maintenance_mode' => $this->settings->bool('maintenance_mode', false),
             'maintenance_message' => $this->settings->string('maintenance_message', ''),
-            'cache_files' => count(glob((string) Config::get('app.paths.cache') . '/*') ?: []),
             'stale_sessions' => (new SessionRepository())->activeCount(86400),
         ]);
     }
@@ -122,7 +120,6 @@ final class SystemController extends Controller
             'purge-sessions' => sprintf('%d stale session record(s) removed.', (new SessionRepository())->purge(86400)),
             'purge-throttles' => sprintf('%d expired throttle record(s) removed.', RateLimiter::purgeExpired()),
             'expire-bans' => $this->expireBans($moderation),
-            'clear-cache' => $this->clearCache(),
             'toggle-maintenance' => $this->toggleMaintenance(),
             default => null,
         };
@@ -153,21 +150,6 @@ final class SystemController extends Controller
         $moderation->expireLapsedBans();
 
         return 'Lapsed suspensions were cleared.';
-    }
-
-    private function clearCache(): string
-    {
-        $directory = (string) Config::get('app.paths.cache');
-        $removed = 0;
-
-        foreach (glob($directory . '/*') ?: [] as $file) {
-            if (is_file($file) && basename($file) !== '.gitkeep') {
-                @unlink($file);
-                $removed++;
-            }
-        }
-
-        return sprintf('%d cache file(s) removed.', $removed);
     }
 
     private function toggleMaintenance(): string

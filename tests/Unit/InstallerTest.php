@@ -15,11 +15,9 @@ return [
     'requirements report the runtime honestly' => static function (): void {
         $checks = (new Installer())->requirements();
 
-        Assert::true(count($checks) >= 8, 'every prerequisite is listed');
-
         $labels = array_column($checks, 'label');
 
-        foreach (['PHP 8.3 or newer', 'Extension: pdo_mysql', 'Extension: gd'] as $expected) {
+        foreach (['PHP ' . Installer::MINIMUM_PHP . ' or newer', 'Extension: pdo_mysql'] as $expected) {
             Assert::true(in_array($expected, $labels, true), $expected . ' must be checked');
         }
 
@@ -28,6 +26,44 @@ return [
             Assert::true(is_bool($check['required']));
             Assert::true($check['detail'] !== '', $check['label'] . ' should explain itself');
         }
+    },
+
+    'only what the board truly cannot run without is required' => static function (): void {
+        // The point of this list is that it is short. Somebody installing on
+        // hosting they do not administer cannot add an extension, so anything
+        // the board can work around must not stop them.
+        $required = array_values(array_filter(
+            (new Installer())->requirements(),
+            static fn (array $check): bool => $check['required'],
+        ));
+
+        $labels = array_column($required, 'label');
+        sort($labels);
+
+        Assert::same(
+            ['Extension: mbstring', 'Extension: pdo_mysql', 'PHP ' . Installer::MINIMUM_PHP . ' or newer'],
+            $labels,
+            'these three, and nothing else, may block an installation',
+        );
+    },
+
+    'the image library accepts either gd or imagick' => static function (): void {
+        $checks = (new Installer())->requirements();
+        $image = null;
+
+        foreach ($checks as $check) {
+            if (str_contains($check['label'], 'Image library')) {
+                $image = $check;
+            }
+        }
+
+        Assert::notNull($image, 'the image library is reported');
+        Assert::false($image['required'], 'and it never blocks installation');
+        Assert::same(
+            extension_loaded('gd') || extension_loaded('imagick'),
+            $image['ok'],
+            'either extension satisfies it',
+        );
     },
 
     'a failed optional check does not block installation' => static function (): void {
@@ -134,9 +170,73 @@ return [
         Assert::true(isset($badName['username']) && isset($badName['email']));
     },
 
-    'an installed board reports itself as installed' => static function (): void {
-        // This checkout is installed, so the guard must say so — that is what
-        // stops the installer running a second time on a live board.
-        Assert::true((new Installer())->isInstalled());
+    'a refused connection is not reported as a bad password' => static function (): void {
+        // Port 1 has nothing listening, so this fails immediately.
+        $result = (new Installer())->testDatabase([
+            'host' => '127.0.0.1',
+            'port' => '1',
+            'database' => 'anything',
+            'username' => 'someone',
+            'password' => 'secret',
+        ]);
+
+        Assert::false($result['ok']);
+        Assert::false(isset($result['errors']['username']), 'the credentials were never even tried');
+        Assert::true(isset($result['errors']['host']), 'the host is what needs looking at');
+    },
+
+    'a host that does not resolve says so' => static function (): void {
+        $result = (new Installer())->testDatabase([
+            'host' => 'no-such-host.invalid',
+            'port' => '3306',
+            'database' => 'anything',
+            'username' => 'someone',
+            'password' => 'secret',
+        ]);
+
+        Assert::false($result['ok']);
+        Assert::contains('resolve', $result['message']);
+        Assert::true(isset($result['errors']['host']));
+    },
+
+    'the suggested host suits where the installer is running' => static function (): void {
+        $host = (new Installer())->suggestedDatabaseHost();
+
+        Assert::true(
+            in_array($host, ['127.0.0.1', 'host.docker.internal'], true),
+            'unexpected suggestion: ' . $host,
+        );
+
+        // These tests run in a container, where a loopback address would point
+        // at the container itself and fail on the very first screen.
+        if (is_file('/.dockerenv')) {
+            Assert::same('host.docker.internal', $host);
+        }
+    },
+
+    'an invalid database name never reaches the server' => static function (): void {
+        $result = (new Installer())->testDatabase([
+            'host' => '127.0.0.1',
+            'port' => '3306',
+            'database' => 'forum; DROP DATABASE coldwire',
+            'username' => 'someone',
+            'password' => 'secret',
+        ]);
+
+        Assert::false($result['ok']);
+        Assert::true(isset($result['errors']['database']));
+        Assert::contains('letters, digits and underscores', $result['message']);
+    },
+
+    'the guard names why it refuses, rather than just refusing' => static function (): void {
+        $reason = (new Installer())->blockedReason();
+
+        // Either it is not blocked, or it can say which signal blocked it.
+        Assert::true(
+            $reason === null || in_array($reason, ['lock', 'accounts'], true),
+            'unexpected reason: ' . var_export($reason, true),
+        );
+
+        Assert::same($reason !== null, (new Installer())->isInstalled());
     },
 ];

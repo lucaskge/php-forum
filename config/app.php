@@ -33,6 +33,5 @@ return [
         'themes' => BASE_PATH . '/templates/themes',
         'uploads' => BASE_PATH . '/public/uploads',
         'logs' => BASE_PATH . '/storage/logs',
-        'cache' => BASE_PATH . '/storage/cache',
     ],
 ];

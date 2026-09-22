@@ -34,11 +34,35 @@ rendered on the last request.
 
 ## Requirements
 
-| Component | Version | Notes |
-|-----------|---------|-------|
-| PHP       | 8.3 or newer | `pdo_mysql`, `mbstring`, `json`, `fileinfo` required; `gd` required for avatar uploads |
-| MySQL     | 8.0 or newer | MariaDB 10.6+ works too; the schema is tested against both |
-| Web server | any | Apache with `mod_rewrite`, nginx, or PHP's built-in server for development |
+The list is short on purpose. If you do not administer the server you cannot add
+an extension, so anything the board can work around must not stop you.
+
+**Required — nothing works without these:**
+
+| Requirement | Why |
+|-------------|-----|
+| PHP 8.1 or newer | The code uses enums, readonly properties and `never`. The suite runs on 8.1 and 8.3 |
+| `pdo_mysql` | How the board reaches MySQL or MariaDB. No way around it |
+| `mbstring` | Counts and cuts non-ASCII text. Part of the standard PHP build |
+| MySQL 8.0+ / MariaDB 10.6+ | The schema is tested against both |
+
+**Optional — each costs you one thing and nothing else:**
+
+| Requirement | Without it |
+|-------------|------------|
+| `gd` **or** `imagick` | No avatar uploads; everyone keeps the generated monogram. Either library satisfies it |
+| `fileinfo` | One of several cross-checks on uploads is skipped; the rest, including re-encoding, still apply |
+| Writable `storage/logs` | The board runs but keeps no record of errors or security events |
+| Writable `public/uploads/avatars` | No avatar uploads. Turn them off in the settings and it stops mattering |
+| Writable project root | The installer shows you the `.env` to save by hand instead of writing it |
+
+`json` is not listed because it cannot be disabled in PHP 8. Any web server will
+do: Apache, nginx, or PHP's built-in server for development — and with the
+default URL mode, no rewrite rules either.
+
+The installer checks all of this in the browser and tells you what each failure
+costs, so you can find out whether a host will work by uploading the files and
+opening one page.
 
 Timestamps are stored in UTC throughout: the connection pins its session zone to
 `+00:00`, so column defaults and the `UTC_TIMESTAMP()` comparisons in queries
@@ -157,10 +181,11 @@ REFERENCES`).
 
 ### Directory permissions
 
-Three directories must be writable by the web server user:
+Two directories should be writable by the web server user. Neither is fatal —
+see the table above for what you lose:
 
 ```bash
-chmod -R 775 storage/logs storage/cache public/uploads
+chmod -R 775 storage/logs public/uploads
 ```
 
 ---
@@ -287,7 +312,6 @@ public/               the only web-reachable directory
 routes/web.php        every route, with its middleware
 storage/
   logs/               app, security and mail logs
-  cache/
 templates/themes/
   default/            the shipped theme (templates + assets)
 tests/                unit and feature tests plus the runner

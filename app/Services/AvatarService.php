@@ -34,7 +34,7 @@ final class AvatarService
     public function store(array $file, int $userId): array
     {
         if (!$this->available()) {
-            Logger::error('Avatar upload attempted without the GD extension');
+            Logger::error('Avatar upload attempted with no image library available');
 
             return ['ok' => false, 'message' => 'Image uploads are unavailable on this server.'];
         }
@@ -90,9 +90,17 @@ final class AvatarService
     /**
      * Decodes the source and writes a fresh PNG. Nothing from the original file
      * is copied across — only the pixels.
+     *
+     * Either image library will do. GD is the common one; Imagick is what some
+     * hosts ship instead, and on those the feature would otherwise be lost for
+     * no reason.
      */
     private function reencode(string $source, string $mime, string $destination): bool
     {
+        if (!extension_loaded('gd') && extension_loaded('imagick')) {
+            return $this->reencodeWithImagick($source, $destination);
+        }
+
         $image = match ($mime) {
             'image/jpeg' => @imagecreatefromjpeg($source),
             'image/png' => @imagecreatefrompng($source),
@@ -153,6 +161,38 @@ final class AvatarService
         return $written;
     }
 
+    /**
+     * The Imagick path. Same contract as the GD one: decode, scale to fit, and
+     * write a fresh PNG carrying no metadata from the original.
+     */
+    private function reencodeWithImagick(string $source, string $destination): bool
+    {
+        $config = Config::get('uploads.avatars');
+
+        try {
+            $image = new \Imagick();
+            $image->setBackgroundColor(new \ImagickPixel('transparent'));
+            $image->readImage($source);
+
+            // A multi-frame image (an animated GIF) becomes its first frame.
+            $image = $image->coalesceImages();
+            $image->setIteratorIndex(0);
+
+            $image->thumbnailImage((int) $config['max_width'], (int) $config['max_height'], true);
+            $image->stripImage();
+            $image->setImageFormat('png');
+
+            $written = $image->writeImage($destination);
+            $image->clear();
+
+            return (bool) $written;
+        } catch (\Throwable $exception) {
+            Logger::error('Imagick could not process an avatar', ['error' => $exception->getMessage()]);
+
+            return false;
+        }
+    }
+
     public function remove(?string $path): void
     {
         if ($path === null || $path === '') {
@@ -181,10 +221,18 @@ final class AvatarService
         }
     }
 
-    /** Uploads need GD; without it the feature refuses rather than degrades. */
+    /**
+     * Uploads need an image library, because an avatar is only stored after it
+     * has been decoded and re-encoded. Without one the feature refuses rather
+     * than storing bytes it cannot vouch for.
+     */
     public function available(): bool
     {
-        return extension_loaded('gd') && function_exists('imagecreatetruecolor') && function_exists('imagepng');
+        if (extension_loaded('gd') && function_exists('imagecreatetruecolor') && function_exists('imagepng')) {
+            return true;
+        }
+
+        return extension_loaded('imagick') && class_exists(\Imagick::class);
     }
 
     /** @return array<int,string> Human-readable list of accepted formats. */
