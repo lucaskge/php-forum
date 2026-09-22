@@ -1,0 +1,40 @@
+# ---------------------------------------------------------------------------
+# Optional bundled database, for machines with no MySQL of their own.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.db.yml up -d
+#
+# It publishes 3307 rather than 3306 so it cannot collide with a MySQL that is
+# already running on the host. Point .env at it with:
+#
+#   DB_HOST=db
+#   DB_PORT=3306        (the port *inside* the compose network)
+#   DB_DATABASE=coldwire
+#   DB_USERNAME=coldwire
+#   DB_PASSWORD=secret
+# ---------------------------------------------------------------------------
+
+services:
+  app:
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mariadb:11
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: coldwire
+      MARIADB_USER: coldwire
+      MARIADB_PASSWORD: secret
+    ports:
+      - "3307:3306"
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  db-data:

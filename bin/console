@@ -1,0 +1,282 @@
+#!/usr/bin/env php
+<?php
+
+/**
+ * Coldwire — command line tool.
+ *
+ *   php bin/console migrate            apply pending migrations
+ *   php bin/console migrate:fresh      drop everything and migrate from zero
+ *   php bin/console db:seed            load the demo data
+ *   php bin/console install            fresh migrate + seed, for a new checkout
+ *   php bin/console key:generate       write a new APP_KEY into .env
+ *   php bin/console theme:sync         register themes found on disk
+ *   php bin/console user:promote       give an account the administrator role
+ *   php bin/console routes             list every registered route
+ *   php bin/console serve [host:port]  run PHP's built-in server on /public
+ */
+
+declare(strict_types=1);
+
+if (PHP_SAPI !== 'cli') {
+    exit(1);
+}
+
+define('BASE_PATH', dirname(__DIR__));
+
+require BASE_PATH . '/app/Support/Autoloader.php';
+
+App\Support\Autoloader::register(BASE_PATH . '/app');
+App\Support\Autoloader::register(BASE_PATH . '/database/seeders', 'Database\\Seeders\\');
+
+use App\Repositories\RoleRepository;
+use App\Repositories\UserRepository;
+use App\Services\ThemeManager;
+use App\Support\Config;
+use App\Support\Database;
+use App\Support\Env;
+use App\Support\Migrator;
+use App\Support\Str;
+use Database\Seeders\DatabaseSeeder;
+
+Env::load(BASE_PATH . '/.env');
+Config::load(BASE_PATH . '/config');
+date_default_timezone_set('UTC');
+
+$command = $argv[1] ?? 'help';
+$arguments = array_slice($argv, 2);
+
+function out(string $line = ''): void
+{
+    fwrite(STDOUT, $line . PHP_EOL);
+}
+
+function fail(string $line): never
+{
+    fwrite(STDERR, $line . PHP_EOL);
+    exit(1);
+}
+
+/** Creates the database if it does not exist, then returns a connection to it. */
+function connectAllowingMissingDatabase(): PDO
+{
+    $config = Config::get('database');
+
+    $dsn = sprintf('mysql:host=%s;port=%d;charset=%s', $config['host'], $config['port'], $config['charset']);
+
+    try {
+        $pdo = new PDO($dsn, (string) $config['username'], (string) $config['password'], [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        ]);
+    } catch (PDOException $exception) {
+        fail('Cannot reach the database server: ' . $exception->getMessage());
+    }
+
+    $database = (string) $config['database'];
+
+    $pdo->exec(sprintf(
+        'CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET %s COLLATE %s',
+        str_replace('`', '', $database),
+        $config['charset'],
+        $config['collation'],
+    ));
+
+    $pdo->exec('USE `' . str_replace('`', '', $database) . '`');
+    $pdo->exec("SET time_zone = '+00:00'");
+
+    return $pdo;
+}
+
+function runMigrations(Database $db): int
+{
+    try {
+        $applied = (new Migrator($db))->run();
+    } catch (RuntimeException $exception) {
+        fail($exception->getMessage());
+    }
+
+    foreach ($applied as $name) {
+        out('  applied ' . $name);
+    }
+
+    return count($applied);
+}
+
+function dropEverything(Database $db): int
+{
+    return (new Migrator($db))->dropEverything((string) Config::get('database.database'));
+}
+
+// ---------------------------------------------------------------------------
+
+switch ($command) {
+    case 'migrate':
+        Database::swap(connectAllowingMissingDatabase());
+        out('Applying migrations…');
+        $count = runMigrations(Database::instance());
+        out($count === 0 ? 'Nothing to migrate — the schema is current.' : sprintf('%d migration(s) applied.', $count));
+
+        break;
+
+    case 'migrate:fresh':
+        Database::swap(connectAllowingMissingDatabase());
+        $dropped = dropEverything(Database::instance());
+        out(sprintf('Dropped %d table(s).', $dropped));
+        out('Applying migrations…');
+        $count = runMigrations(Database::instance());
+        out(sprintf('%d migration(s) applied.', $count));
+
+        break;
+
+    case 'db:seed':
+        Database::swap(connectAllowingMissingDatabase());
+        out('Seeding demo data…');
+
+        foreach ((new DatabaseSeeder())->run() as $line) {
+            out('  ' . $line);
+        }
+
+        out('Done.');
+
+        break;
+
+    case 'install':
+        Database::swap(connectAllowingMissingDatabase());
+        out('Dropping existing tables…');
+        dropEverything(Database::instance());
+        out('Applying migrations…');
+        runMigrations(Database::instance());
+        out('Seeding demo data…');
+
+        foreach ((new DatabaseSeeder())->run() as $line) {
+            out('  ' . $line);
+        }
+
+        out('');
+        out('Installation complete. Demo accounts:');
+        out('  admin      / coldwire-admin-1   (administrator)');
+        out('  nullroute  / coldwire-mod-1     (moderator)');
+        out('  hexdump    / coldwire-mod-2     (moderator)');
+        out('  grepwire   / coldwire-user-1    (trusted member)');
+        out('  pale_socket/ coldwire-user-2    (member)');
+        out('');
+        out('Start the board with: php bin/console serve');
+
+        break;
+
+    case 'key:generate':
+        $key = Str::random(32);
+        $file = BASE_PATH . '/.env';
+
+        if (!is_writable($file)) {
+            fail('.env is not writable. Add this line manually: APP_KEY=' . $key);
+        }
+
+        $contents = (string) file_get_contents($file);
+
+        $contents = preg_match('/^APP_KEY=.*$/m', $contents) === 1
+            ? (string) preg_replace('/^APP_KEY=.*$/m', 'APP_KEY=' . $key, $contents)
+            : rtrim($contents) . "\nAPP_KEY=" . $key . "\n";
+
+        file_put_contents($file, $contents);
+        out('New APP_KEY written to .env.');
+
+        break;
+
+    case 'theme:sync':
+        Database::swap(connectAllowingMissingDatabase());
+        $added = (new ThemeManager())->synchronise();
+        out($added === 0 ? 'No new themes found on disk.' : sprintf('%d theme(s) registered.', $added));
+
+        break;
+
+    case 'user:promote':
+        $username = $arguments[0] ?? null;
+
+        if ($username === null) {
+            fail('Usage: php bin/console user:promote <username>');
+        }
+
+        Database::swap(connectAllowingMissingDatabase());
+
+        $users = new UserRepository();
+        $roles = new RoleRepository();
+        $user = $users->findByUsername($username);
+
+        if ($user === null) {
+            fail('No account named ' . $username . '.');
+        }
+
+        $role = $roles->findBySlug('administrator');
+
+        if ($role === null) {
+            fail('The administrator role is missing. Run db:seed first.');
+        }
+
+        $roles->assign((int) $user['id'], (int) $role['id']);
+        $users->update((int) $user['id'], ['primary_role_id' => (int) $role['id'], 'status' => 'active']);
+
+        out($username . ' is now an administrator.');
+
+        break;
+
+    case 'routes':
+        $kernel = new App\Support\Kernel();
+        $kernel->boot();
+
+        foreach ($kernel->router()->routes() as $route) {
+            out(sprintf(
+                '%-12s %-52s %-28s %s',
+                implode('|', array_diff($route->methods(), ['HEAD'])),
+                $route->uri(),
+                $route->routeName(),
+                implode(',', $route->middlewareStack()),
+            ));
+        }
+
+        break;
+
+    case 'serve':
+        $address = $arguments[0] ?? '127.0.0.1:8080';
+        out('Coldwire is listening on http://' . $address);
+        out('Press Ctrl+C to stop.');
+        passthru(sprintf(
+            '%s -S %s -t %s %s',
+            PHP_BINARY,
+            escapeshellarg($address),
+            escapeshellarg(BASE_PATH . '/public'),
+            escapeshellarg(BASE_PATH . '/public/router.php'),
+        ));
+
+        break;
+
+    case 'maintenance:run':
+        Database::swap(connectAllowingMissingDatabase());
+
+        $sessions = (new App\Repositories\SessionRepository())->purge(86400);
+        $throttles = App\Support\RateLimiter::purgeExpired();
+        (new App\Services\ModerationService())->expireLapsedBans();
+
+        out(sprintf('%d session record(s) purged.', $sessions));
+        out(sprintf('%d expired throttle(s) removed.', $throttles));
+        out('Lapsed suspensions cleared.');
+
+        break;
+
+    case 'help':
+    default:
+        out('Coldwire console');
+        out('');
+        out('  migrate            apply pending migrations');
+        out('  migrate:fresh      drop every table and migrate from zero');
+        out('  db:seed            load the demo data (clears the tables it owns)');
+        out('  install            migrate:fresh + db:seed');
+        out('  key:generate       write a new APP_KEY into .env');
+        out('  theme:sync         register themes found under /templates/themes');
+        out('  maintenance:run    purge stale sessions and throttles, expire suspensions');
+        out('  user:promote NAME  give an account the administrator role');
+        out('  routes             list every registered route');
+        out('  serve [host:port]  run the built-in server on /public');
+
+        break;
+}

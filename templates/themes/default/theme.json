@@ -1,0 +1,60 @@
+{
+    "name": "Coldwire Default",
+    "slug": "default",
+    "version": "1.1.0",
+    "author": "Coldwire",
+    "description": "Dark, cold and technical. A dense traditional board layout built for reading: charcoal panels, desaturated blue-grey accents, monospace used only where it carries meaning, and no JavaScript anywhere.",
+    "parent": null,
+    "screenshot": null,
+    "supports": {
+        "layouts": ["main", "narrow", "minimal", "admin", "moderation"],
+        "customisable": true
+    },
+    "settings": [
+        { "key": "background",       "group": "Palette",    "label": "Page background",      "type": "colour",  "default": "#0a0c0e", "css": "--bg",          "hint": "The colour behind everything." },
+        { "key": "surface",          "group": "Palette",    "label": "Panel background",     "type": "colour",  "default": "#101317", "css": "--surface" },
+        { "key": "surface_raised",   "group": "Palette",    "label": "Raised panel",         "type": "colour",  "default": "#141920", "css": "--surface-2",   "hint": "Table headers, form fields, panel headings." },
+        { "key": "border",           "group": "Palette",    "label": "Borders",              "type": "colour",  "default": "#242c35", "css": "--line" },
+        { "key": "accent",           "group": "Palette",    "label": "Accent",               "type": "colour",  "default": "#6d93b8", "css": "--accent",      "hint": "Buttons, current page markers, highlights." },
+
+        { "key": "text",             "group": "Text",       "label": "Body text",            "type": "colour",  "default": "#b6c2cd", "css": "--ink" },
+        { "key": "text_strong",      "group": "Text",       "label": "Headings and emphasis","type": "colour",  "default": "#e4ebf2", "css": "--ink-strong" },
+        { "key": "text_dim",         "group": "Text",       "label": "Secondary text",       "type": "colour",  "default": "#6d7986", "css": "--ink-dim",     "hint": "Timestamps, counters, hints." },
+        { "key": "link",             "group": "Text",       "label": "Links",                "type": "colour",  "default": "#6d93b8", "css": "--link" },
+        { "key": "link_hover",       "group": "Text",       "label": "Links on hover",       "type": "colour",  "default": "#e4ebf2", "css": "--link-hover" },
+
+        { "key": "code_background",  "group": "Code",       "label": "Code background",      "type": "colour",  "default": "#0b0e11", "css": "--code-bg" },
+        { "key": "code_text",        "group": "Code",       "label": "Plain code",           "type": "colour",  "default": "#9db6cc", "css": "--code-text" },
+        { "key": "code_comment",     "group": "Code",       "label": "Comments",             "type": "colour",  "default": "#5b6b78", "css": "--tok-comment" },
+        { "key": "code_string",      "group": "Code",       "label": "Strings",              "type": "colour",  "default": "#8faf7c", "css": "--tok-string" },
+        { "key": "code_number",      "group": "Code",       "label": "Numbers",              "type": "colour",  "default": "#c39a6b", "css": "--tok-number" },
+        { "key": "code_keyword",     "group": "Code",       "label": "Keywords",             "type": "colour",  "default": "#7fa7cc", "css": "--tok-keyword" },
+        { "key": "code_literal",     "group": "Code",       "label": "Booleans and null",    "type": "colour",  "default": "#b08ac2", "css": "--tok-literal" },
+        { "key": "code_variable",    "group": "Code",       "label": "Variables",            "type": "colour",  "default": "#d3a978", "css": "--tok-variable" },
+        { "key": "code_function",    "group": "Code",       "label": "Functions",            "type": "colour",  "default": "#74b3a6", "css": "--tok-function" },
+        { "key": "code_type",        "group": "Code",       "label": "Classes and types",    "type": "colour",  "default": "#c6b36c", "css": "--tok-type" },
+        { "key": "code_tag",         "group": "Code",       "label": "Markup tags",          "type": "colour",  "default": "#7fa7cc", "css": "--tok-tag" },
+        { "key": "code_attribute",   "group": "Code",       "label": "Attributes",           "type": "colour",  "default": "#9db6cc", "css": "--tok-attribute" },
+        { "key": "code_operator",    "group": "Code",       "label": "Operators",            "type": "colour",  "default": "#a4b2bf", "css": "--tok-operator" },
+        { "key": "code_punctuation", "group": "Code",       "label": "Punctuation",          "type": "colour",  "default": "#6d7986", "css": "--tok-punctuation" },
+
+        { "key": "font_size",        "group": "Layout",     "label": "Base text size",       "type": "integer", "default": "14", "css": "--base-font-size", "unit": "px", "min": 11, "max": 20 },
+        { "key": "radius",           "group": "Layout",     "label": "Corner radius",        "type": "integer", "default": "2",  "css": "--radius",         "unit": "px", "min": 0,  "max": 12 },
+        { "key": "gap",              "group": "Layout",     "label": "Panel spacing",        "type": "integer", "default": "14", "css": "--gap",            "unit": "px", "min": 6,  "max": 32 },
+        { "key": "content_width",    "group": "Layout",     "label": "Maximum page width",   "type": "integer", "default": "1240", "css": "--shell-width",  "unit": "px", "min": 900, "max": 1800 },
+        { "key": "body_font",        "group": "Layout",     "label": "Interface typeface",   "type": "select",  "default": "system", "css": "--font-sans",
+          "options": {
+              "system": "System sans-serif",
+              "mono": "Monospace throughout",
+              "serif": "Serif",
+              "grotesque": "Neo-grotesque stack"
+          },
+          "values": {
+              "system": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+              "mono": "ui-monospace, SFMono-Regular, \"SF Mono\", \"JetBrains Mono\", Menlo, Consolas, monospace",
+              "serif": "Iowan Old Style, Charter, Georgia, \"Times New Roman\", serif",
+              "grotesque": "Inter, \"Helvetica Neue\", \"Arial Nova\", Helvetica, Arial, sans-serif"
+          }
+        }
+    ]
+}

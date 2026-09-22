@@ -1,0 +1,34 @@
+# ---------------------------------------------------------------------------
+# Development stack. Nothing here is required to run Coldwire — it exists so a
+# machine without PHP installed can still bring the board up:
+#
+#   docker compose up -d
+#   docker compose run --rm app php bin/console install
+#   open http://127.0.0.1:8080
+#
+# The database is whatever DB_HOST in .env points at. `host.docker.internal`
+# resolves to the host machine, so an existing MySQL — installed locally or
+# running in another container that publishes a port — is reached without
+# touching it.
+#
+# No database of your own? Start the bundled one alongside this file:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.db.yml up -d
+#
+# For production, serve /public with Apache or nginx + PHP-FPM as described in
+# the README.
+# ---------------------------------------------------------------------------
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    working_dir: /app
+    volumes:
+      - .:/app
+    ports:
+      - "8080:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: php -S 0.0.0.0:8080 -t /app/public /app/public/router.php

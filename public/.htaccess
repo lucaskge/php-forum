@@ -1,0 +1,21 @@
+# Apache front-controller rules. Nginx users: see the README.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Serve existing files (theme assets are routed through PHP on purpose).
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteCond %{REQUEST_URI} !^/index\.php
+    RewriteRule ^ - [L]
+
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+</IfModule>
+
+# Uploaded files are data. Never let the server execute anything in them.
+<Directory "uploads">
+    php_flag engine off
+    Options -ExecCGI -Indexes
+</Directory>

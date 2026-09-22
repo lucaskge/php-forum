@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Coldwire">
+  <rect width="32" height="32" rx="3" fill="#0a0c0e"/>
+  <rect x="1.5" y="1.5" width="29" height="29" rx="2.5" fill="none" stroke="#242c35"/>
+  <path d="M7 11h6M7 16h12M7 21h9" stroke="#6d93b8" stroke-width="2" stroke-linecap="square"/>
+  <circle cx="24" cy="11" r="2" fill="#40607d"/>
+</svg>
