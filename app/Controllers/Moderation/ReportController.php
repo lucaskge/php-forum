@@ -50,8 +50,16 @@ final class ReportController extends Controller
         $this->view->title('Reports');
         $this->view->meta('robots', 'noindex');
 
+        // One link per row, derived from the row itself — no query per report.
+        $links = [];
+
+        foreach ($paginator->items() as $report) {
+            $links[(int) $report['id']] = $this->service->contentUrl($report);
+        }
+
         return $this->render('moderation/reports', [
             'paginator' => $paginator,
+            'links' => $links,
             'status' => $status,
             'counts' => [
                 'pending' => $this->reports->countByStatus(ReportStatus::Pending->value),

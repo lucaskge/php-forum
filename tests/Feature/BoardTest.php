@@ -412,6 +412,182 @@ return [
         Assert::same(0, (int) ($notifications->find($id)['is_read'] ?? 1), 'and it stays unread');
     },
 
+    'a member can be reported, not only a post' => static function (): void {
+        $reports = new App\Repositories\ReportRepository();
+        $reporter = (new App\Repositories\UserRepository())->findByUsername('quiet_fan');
+        Assert::notNull($reporter);
+
+        Harness::loginAs('quiet_fan');
+        Harness::clearThrottles();
+
+        Assert::same(200, Harness::get('/user/loudpacket/report')->status(), 'the form is reachable');
+
+        $before = $reports->countByStatus('pending');
+
+        $submit = static fn (): int => Harness::post('/user/loudpacket/report', [
+            '_token' => App\Support\Csrf::token(),
+            'reason' => 'abuse',
+            'details' => 'Reported by the feature test, describing conduct across several topics.',
+        ])->status();
+
+        try {
+            Assert::same(302, $submit());
+            Assert::same($before + 1, $reports->countByStatus('pending'), 'the report reached the queue');
+
+            // Reporting the same member twice does not pile up duplicates.
+            Assert::same(302, $submit());
+            Assert::same($before + 1, $reports->countByStatus('pending'), 'a second report is absorbed');
+            Assert::contains('already reported', Harness::flashText());
+        } finally {
+            // The suite must be repeatable, and the duplicate guard would stop
+            // the next run from ever creating this report again.
+            App\Support\Database::instance()->execute(
+                'DELETE FROM reports WHERE reporter_id = :reporter AND content_type = :type AND details LIKE :marker',
+                [
+                    'reporter' => (int) $reporter['id'],
+                    'type' => 'user',
+                    'marker' => 'Reported by the feature test%',
+                ],
+            );
+        }
+    },
+
+    'nobody can report themselves' => static function (): void {
+        Harness::loginAs('quiet_fan');
+
+        Assert::same(403, Harness::get('/user/quiet_fan/report')->status());
+    },
+
+    'a guest cannot report anyone' => static function (): void {
+        Harness::logout();
+
+        Assert::same(302, Harness::get('/user/loudpacket/report')->status(), 'sent to sign in');
+    },
+
+    'the report queue links to what was reported' => static function (): void {
+        Harness::loginAs('nullroute');
+
+        $body = Harness::get('/moderation/reports', ['status' => 'all'])->body();
+
+        Assert::same(200, Harness::get('/moderation/reports', ['status' => 'all'])->status());
+        Assert::contains('Open the reported content', $body, 'the listing links, rather than printing an id');
+
+        // A reported member points at their moderation record.
+        Assert::contains('moderation/users/loudpacket', urldecode($body));
+    },
+
+    'a reported member resolves on the review screen' => static function (): void {
+        $reports = new App\Repositories\ReportRepository();
+        $paginator = $reports->paginate('all', 1, 50, '/x');
+        $userReport = null;
+
+        foreach ($paginator->items() as $report) {
+            if ((string) $report['content_type'] === 'user') {
+                $userReport = $report;
+
+                break;
+            }
+        }
+
+        Assert::notNull($userReport, 'the fixture has a member report');
+
+        $content = (new App\Services\ReportService())->resolveContent($userReport);
+
+        Assert::true($content['exists'], 'a reported member is not "content that no longer exists"');
+        Assert::contains('The member', $content['label']);
+        Assert::notNull($content['url']);
+    },
+
+    'one post never produces two alerts for the same person' => static function (): void {
+        $db = App\Support\Database::instance();
+        $users = new App\Repositories\UserRepository();
+        $topics = new App\Repositories\TopicRepository();
+
+        $topic = $topics->findBySlug('the-long-thread');
+        $target = $users->findByUsername('stratum');
+        $author = $users->findByUsername('grepwire');
+        Assert::notNull($topic);
+        Assert::notNull($target);
+        Assert::notNull($author);
+
+        $targetId = (int) $target['id'];
+
+        // Subscribed, quoted and mentioned — three reasons, one post.
+        $topics->subscribe($targetId, (int) $topic['id']);
+        $db->delete('notifications', 'user_id = :user', ['user' => $targetId]);
+
+        $first = (int) $db->scalar(
+            'SELECT id FROM posts WHERE topic_id = :topic ORDER BY id ASC LIMIT 1',
+            ['topic' => (int) $topic['id']],
+        );
+
+        $result = (new App\Services\TopicService())->reply(
+            $topic,
+            (int) $author['id'],
+            '[quote=stratum;' . $first . ']quoted[/quote] and @stratum mentioned',
+            '127.0.0.1',
+            $targetId,
+            false,
+        );
+
+        try {
+            $alerts = $db->select(
+                'SELECT type FROM notifications WHERE user_id = :user',
+                ['user' => $targetId],
+            );
+
+            Assert::same(1, count($alerts), 'one post, one alert');
+            Assert::same('post.quote', (string) $alerts[0]['type'], 'and it names the most specific reason');
+        } finally {
+            $db->delete('posts', 'id = :id', ['id' => $result['post_id']]);
+            $db->delete('notifications', 'user_id = :user', ['user' => $targetId]);
+            $topics->unsubscribe($targetId, (int) $topic['id']);
+            $topics->refreshCounters((int) $topic['id']);
+        }
+    },
+
+    'a private message does not also raise an alert' => static function (): void {
+        $users = new App\Repositories\UserRepository();
+        $notifications = new App\Repositories\NotificationRepository();
+        $db = App\Support\Database::instance();
+
+        $sender = $users->findByUsername('grepwire');
+        $recipient = $users->findByUsername('quiet_fan');
+        Assert::notNull($sender);
+        Assert::notNull($recipient);
+
+        $recipientId = (int) $recipient['id'];
+        $db->delete('notifications', 'user_id = :user', ['user' => $recipientId]);
+
+        $service = new App\Services\MessageService();
+
+        try {
+            // The inbox counter is the notification for a message.
+            $users->update($recipientId, ['notify_messages' => 0]);
+            $sent = $service->send($sender, 'quiet_fan', 'Feature test message', 'Body written by the test suite.');
+
+            Assert::true($sent['ok'], (string) ($sent['message'] ?? ''));
+            Assert::same(0, $notifications->unreadCount($recipientId), 'no second counter for the same thing');
+            Assert::true(
+                (new App\Repositories\MessageRepository())->unreadCount($recipientId) > 0,
+                'the inbox still counts it',
+            );
+
+            // Unless the member asked for everything in one list.
+            $users->update($recipientId, ['notify_messages' => 1]);
+            $service->send($sender, 'quiet_fan', 'Feature test message two', 'Body written by the test suite.');
+
+            Assert::same(1, $notifications->unreadCount($recipientId), 'opted in, so it is listed');
+        } finally {
+            $users->update($recipientId, ['notify_messages' => 0]);
+            $db->delete('notifications', 'user_id = :user', ['user' => $recipientId]);
+            $db->execute(
+                'DELETE FROM private_messages WHERE recipient_id = :user AND subject LIKE :marker',
+                ['user' => $recipientId, 'marker' => 'Feature test message%'],
+            );
+        }
+    },
+
     'private messages stay between their two parties' => static function (): void {
         $messageId = (int) App\Support\Database::instance()->scalar(
             'SELECT id FROM private_messages ORDER BY id ASC LIMIT 1',
@@ -422,6 +598,100 @@ return [
 
         Harness::loginAs('quiet_fan');
         Assert::same(404, Harness::get('/messages/' . $messageId)->status(), 'nobody else can');
+    },
+
+    'a suspended member is told so on every page' => static function (): void {
+        Harness::loginAs('loudpacket');
+
+        foreach (['/', '/forum/networking', '/topic/the-long-thread', '/members'] as $path) {
+            $body = Harness::get($path)->body();
+
+            Assert::contains('account-restriction', $body, $path . ' must carry the notice');
+            Assert::contains('Repeated advertising', $body, $path . ' must say why');
+        }
+
+        // A member in good standing never sees it.
+        Harness::loginAs('grepwire');
+        Assert::notContains('account-restriction', Harness::get('/')->body());
+    },
+
+    'a suspended member can read their own record' => static function (): void {
+        Harness::loginAs('loudpacket');
+
+        $response = Harness::get('/settings/record');
+
+        Assert::same(200, $response->status());
+        Assert::contains('Repeated advertising', $response->body(), 'the reason is there');
+        Assert::contains('Warnings', $response->body(), 'and so are the warnings');
+    },
+
+    'a warning notification leads somewhere the member can read' => static function (): void {
+        $users = new App\Repositories\UserRepository();
+        $db = App\Support\Database::instance();
+        $target = $users->findByUsername('quiet_fan');
+        $moderator = $users->findByUsername('nullroute');
+        Assert::notNull($target);
+        Assert::notNull($moderator);
+
+        $targetId = (int) $target['id'];
+        $db->delete('notifications', 'user_id = :user', ['user' => $targetId]);
+
+        try {
+            (new App\Services\ModerationService())->warn(
+                $targetId,
+                (int) $moderator['id'],
+                'Feature test warning',
+                'Issued by the test suite.',
+                1,
+                30,
+                '127.0.0.1',
+            );
+
+            $alert = $db->selectOne(
+                'SELECT id, url FROM notifications WHERE user_id = :user ORDER BY id DESC LIMIT 1',
+                ['user' => $targetId],
+            );
+
+            Assert::notNull($alert);
+            Assert::notContains('/notifications', (string) $alert['url'], 'a warning must not point back at the list');
+
+            Harness::loginAs('quiet_fan');
+            $opened = Harness::get('/notifications/' . (int) $alert['id']);
+
+            Assert::same(302, $opened->status());
+
+            $target = urldecode((string) ($opened->headers()['Location'] ?? ''));
+            Assert::contains('/settings/record', $target, 'it leads to the record');
+
+            $record = Harness::get('/settings/record');
+            Assert::contains('Feature test warning', $record->body(), 'where the warning is readable');
+        } finally {
+            $db->execute('DELETE FROM warnings WHERE user_id = :user AND reason = :reason', [
+                'user' => $targetId,
+                'reason' => 'Feature test warning',
+            ]);
+            $db->execute('DELETE FROM moderation_actions WHERE target_user_id = :user AND reason = :reason', [
+                'user' => $targetId,
+                'reason' => 'Feature test warning',
+            ]);
+            $db->delete('notifications', 'user_id = :user', ['user' => $targetId]);
+            $users->update($targetId, ['warning_points' => 0]);
+        }
+    },
+
+    'a profile shows the signature its owner set' => static function (): void {
+        Harness::logout();
+
+        $body = Harness::get('/user/stratum')->body();
+
+        Assert::contains('Signature', $body, 'the profile has a signature section');
+        Assert::contains('RAID is not a backup', $body, 'showing what the member actually set');
+
+        // It is rendered as board markup, not printed raw.
+        Assert::notContains('[i]RAID', $body);
+
+        // Somebody without one gets no empty section.
+        Assert::notContains('Signature', Harness::get('/user/dust_index')->body());
     },
 
     'a suspended account is held at the restriction notice' => static function (): void {
@@ -500,6 +770,65 @@ return [
 
         Assert::same(200, $response->status());
         Assert::contains('Debugging asymmetric routing', $response->body());
+    },
+
+    'every GET form survives the rewrite-free url mode' => static function (): void {
+        // A GET form discards the query string in its action and replaces it
+        // with its own fields. In query mode that drops the route and the
+        // submission lands on the board index — which is exactly how the
+        // search box stopped working once. Every such form must carry the
+        // route as a field instead.
+        Harness::loginAs('admin');
+        Harness::urlMode(App\Support\Url::MODE_QUERY);
+
+        try {
+            foreach ([
+                '/', '/search', '/members', '/moderation/log', '/moderation/users',
+                '/admin/users', '/admin/topics', '/admin/posts', '/chat/room/lobby/moderate',
+            ] as $path) {
+                $body = Harness::get($path)->body();
+
+                preg_match_all('/<form[^>]*method="get"[^>]*>/i', $body, $matches);
+
+                foreach ($matches[0] as $form) {
+                    Assert::notContains(
+                        '?r=',
+                        $form,
+                        $path . ': a GET form cannot carry the route in its action',
+                    );
+                }
+
+                if ($matches[0] !== []) {
+                    Assert::contains(
+                        'name="r"',
+                        $body,
+                        $path . ': its GET form must carry the route as a hidden field',
+                    );
+                }
+            }
+        } finally {
+            Harness::urlMode(null);
+        }
+    },
+
+    'searching finds a post in every url mode' => static function (): void {
+        foreach ([
+            App\Support\Url::MODE_QUERY,
+            App\Support\Url::MODE_PATH,
+            App\Support\Url::MODE_PATH_INFO,
+        ] as $mode) {
+            Harness::logout();
+            Harness::urlMode($mode);
+
+            try {
+                $response = Harness::get('/search', ['q' => 'conntrack', 'mode' => 'posts']);
+
+                Assert::same(200, $response->status(), $mode . ': the search page answers');
+                Assert::contains('Debugging asymmetric routing', $response->body(), $mode . ': and finds the post');
+            } finally {
+                Harness::urlMode(null);
+            }
+        }
     },
 
     'rewrite-free links never escape their slashes' => static function (): void {

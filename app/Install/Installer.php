@@ -30,6 +30,11 @@ final class Installer
 {
     public const LOCK_FILE = '/storage/installed.lock';
 
+    /** The oldest PHP the codebase runs on, verified by the test suite. */
+    public const MINIMUM_PHP = '8.1';
+
+    public const MINIMUM_PHP_ID = 80100;
+
     /** Files and directories removed when the installer is dismissed. */
     private const REMOVABLE = [
         '/public/install.php',
@@ -73,63 +78,68 @@ final class Installer
     }
 
     /**
-     * Environment checks, shown before anything is written.
+     * What the board needs, and what it merely prefers.
+     *
+     * The list is deliberately short. Only three things can stop an
+     * installation: a PHP too old to understand the code, no way to reach
+     * MySQL, and no mbstring. Everything else has a stated consequence and the
+     * board runs without it — which matters when you do not administer the
+     * server and cannot install an extension even if you wanted to.
      *
      * @return array<int,array{label:string,ok:bool,required:bool,detail:string}>
      */
     public function requirements(): array
     {
-        $checks = [];
-
-        $checks[] = [
-            'label' => 'PHP 8.3 or newer',
-            'ok' => PHP_VERSION_ID >= 80300,
-            'required' => true,
-            'detail' => 'Running ' . PHP_VERSION,
-        ];
-
-        foreach ([
-            'pdo_mysql' => 'Talks to MySQL or MariaDB.',
-            'mbstring' => 'Handles text that is not plain ASCII.',
-            'json' => 'Used by settings and the moderation log.',
-            'fileinfo' => 'Identifies uploaded files by their contents.',
-        ] as $extension => $why) {
-            $checks[] = [
-                'label' => 'Extension: ' . $extension,
-                'ok' => extension_loaded($extension),
+        return [
+            [
+                'label' => 'PHP ' . self::MINIMUM_PHP . ' or newer',
+                'ok' => PHP_VERSION_ID >= self::MINIMUM_PHP_ID,
                 'required' => true,
-                'detail' => $why,
-            ];
-        }
-
-        $checks[] = [
-            'label' => 'Extension: gd',
-            'ok' => extension_loaded('gd'),
-            'required' => false,
-            'detail' => 'Needed for avatar uploads. Without it the board works, but members cannot upload a picture.',
-        ];
-
-        foreach ([
-            '/storage/logs' => 'Application and security logs.',
-            '/storage/cache' => 'Cache directory.',
-            '/public/uploads/avatars' => 'Where avatars are stored.',
-        ] as $path => $why) {
-            $checks[] = [
-                'label' => 'Writable: ' . ltrim($path, '/'),
-                'ok' => is_dir(BASE_PATH . $path) && is_writable(BASE_PATH . $path),
+                'detail' => 'Running ' . PHP_VERSION . '. The board uses language features introduced in ' . self::MINIMUM_PHP . '.',
+            ],
+            [
+                'label' => 'Extension: pdo_mysql',
+                'ok' => extension_loaded('pdo_mysql'),
                 'required' => true,
-                'detail' => $why,
-            ];
-        }
-
-        $checks[] = [
-            'label' => 'Writable: project root',
-            'ok' => is_writable(BASE_PATH),
-            'required' => false,
-            'detail' => 'Lets the installer write .env for you. If it is not writable you will be shown the file to create by hand.',
+                'detail' => 'How the board talks to MySQL or MariaDB. There is no way around this one.',
+            ],
+            [
+                'label' => 'Extension: mbstring',
+                'ok' => extension_loaded('mbstring'),
+                'required' => true,
+                'detail' => 'Counts and cuts text that is not plain ASCII. Part of the standard PHP build; hosts effectively always have it.',
+            ],
+            [
+                'label' => 'Image library: gd or imagick',
+                'ok' => extension_loaded('gd') || extension_loaded('imagick'),
+                'required' => false,
+                'detail' => 'Only for avatar uploads: a picture is decoded and re-encoded, which is what makes it safe to store. Without either, the board runs and everybody keeps the generated monogram.',
+            ],
+            [
+                'label' => 'Extension: fileinfo',
+                'ok' => extension_loaded('fileinfo'),
+                'required' => false,
+                'detail' => 'One extra cross-check on uploaded files. Without it the other checks still apply, including re-encoding.',
+            ],
+            [
+                'label' => 'Writable: storage/logs',
+                'ok' => is_dir(BASE_PATH . '/storage/logs') && is_writable(BASE_PATH . '/storage/logs'),
+                'required' => false,
+                'detail' => 'Where errors and security events are recorded. Without it the board works but you lose the record — worth fixing.',
+            ],
+            [
+                'label' => 'Writable: public/uploads/avatars',
+                'ok' => is_dir(BASE_PATH . '/public/uploads/avatars') && is_writable(BASE_PATH . '/public/uploads/avatars'),
+                'required' => false,
+                'detail' => 'Only for avatar uploads. Turn them off in the settings and this stops mattering.',
+            ],
+            [
+                'label' => 'Writable: project root',
+                'ok' => is_writable(BASE_PATH),
+                'required' => false,
+                'detail' => 'Lets the installer save .env for you. If it cannot, you will be shown the file to create by hand.',
+            ],
         ];
-
-        return $checks;
     }
 
     /** @param array<int,array{ok:bool,required:bool}> $checks */
@@ -186,12 +196,7 @@ final class Installer
                 'password' => $input['password'] ?? '',
             ]);
         } catch (PDOException $exception) {
-            return [
-                'ok' => false,
-                'message' => 'Could not reach the database server: ' . $this->cleanDriverMessage($exception),
-                'created' => false,
-                'errors' => ['host' => 'Check the host, port, user and password.'],
-            ];
+            return $this->diagnoseConnection($exception, (string) $input['host'], $port);
         }
 
         $database = (string) $input['database'];
@@ -459,6 +464,104 @@ final class Installer
         }
 
         return ['removed' => $removed, 'failed' => $failed];
+    }
+
+    /**
+     * Turns a driver failure into something actionable.
+     *
+     * "Check the host, port, user and password" is what you write when you have
+     * not looked at the error. The driver already says which of those is wrong:
+     * a refused connection is not a bad password, and a bad password is not a
+     * bad host. Saying so saves the person guessing.
+     *
+     * @return array{ok:false,message:string,created:false,errors:array<string,string>}
+     */
+    private function diagnoseConnection(PDOException $exception, string $host, int $port): array
+    {
+        $detail = $this->cleanDriverMessage($exception);
+        $lower = strtolower($detail);
+
+        // The credentials reached the server, so host and port are right.
+        if (str_contains($lower, 'access denied')) {
+            return [
+                'ok' => false,
+                'message' => 'The server answered, but rejected these credentials: ' . $detail,
+                'created' => false,
+                'errors' => ['username' => 'This user or password is not accepted by the server.'],
+            ];
+        }
+
+        if (str_contains($lower, 'unknown database')) {
+            return [
+                'ok' => false,
+                'message' => 'Connected to the server, but that database is not there: ' . $detail,
+                'created' => false,
+                'errors' => ['database' => 'Create this database first, or check its spelling.'],
+            ];
+        }
+
+        if (str_contains($lower, 'getaddrinfo') || str_contains($lower, 'name or service not known') || str_contains($lower, 'no such host')) {
+            return [
+                'ok' => false,
+                'message' => 'That host name does not resolve: ' . $detail,
+                'created' => false,
+                'errors' => ['host' => 'Check the spelling, or use an IP address.'],
+            ];
+        }
+
+        // Nothing is listening where we looked. This is where a loopback
+        // address inside a container sends people in circles.
+        if ($this->isLoopback($host) && $this->runningInContainer()) {
+            return [
+                'ok' => false,
+                'message' => 'Inside a container, ' . $host . ' means the container itself, not the machine running it. '
+                    . 'Use the database container\'s name if they share a network, or host.docker.internal for the host.',
+                'created' => false,
+                'errors' => ['host' => 'Try host.docker.internal, or the database container\'s name.'],
+            ];
+        }
+
+        $hint = 'Nothing is accepting connections on ' . $host . ':' . $port . '.';
+
+        if ($this->isLoopback($host)) {
+            $hint .= ' If the database runs on another machine, put its address here rather than a loopback one.';
+        }
+
+        return [
+            'ok' => false,
+            'message' => $hint . ' (' . $detail . ')',
+            'created' => false,
+            'errors' => ['host' => 'Check the host and port; the server did not answer.'],
+        ];
+    }
+
+    /**
+     * A sensible starting value for the host field.
+     *
+     * Inside a container a loopback address is almost always wrong, and
+     * offering it as the default is how somebody ends up debugging "connection
+     * refused" on their first screen.
+     */
+    public function suggestedDatabaseHost(): string
+    {
+        return $this->runningInContainer() ? 'host.docker.internal' : '127.0.0.1';
+    }
+
+    private function isLoopback(string $host): bool
+    {
+        return in_array(strtolower($host), ['127.0.0.1', 'localhost', '::1', '[::1]'], true);
+    }
+
+    /** Used only to phrase a hint; never to decide anything. */
+    private function runningInContainer(): bool
+    {
+        if (is_file('/.dockerenv')) {
+            return true;
+        }
+
+        $cgroup = @file_get_contents('/proc/1/cgroup');
+
+        return is_string($cgroup) && (str_contains($cgroup, 'docker') || str_contains($cgroup, 'containerd'));
     }
 
     private function databaseExists(PDO $pdo, string $database): bool

@@ -65,6 +65,20 @@ final class AuthController extends Controller
             return $this->withErrors(['identifier' => (string) $result['message']], ['identifier' => $identifier], Url::route('auth.login.show'));
         }
 
+        // A member serving a suspension is told on the way in, not left to
+        // discover it when a button stops working.
+        $restriction = $this->auth->activeRestriction();
+
+        if ($restriction !== null) {
+            Flash::warning(sprintf(
+                'Signed in. Your account is %s: %s',
+                (string) $restriction['type'] === 'ban' ? 'banned' : 'suspended',
+                (string) $restriction['reason'],
+            ));
+
+            return $this->redirect(Url::route('settings.record'));
+        }
+
         Flash::success('Signed in. Welcome back, ' . (string) $result['user']['username'] . '.');
 
         return $this->redirect($this->intendedUrl(Url::route('home')));

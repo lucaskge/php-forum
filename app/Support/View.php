@@ -275,6 +275,58 @@ final class View
         return Url::route('styles.dynamic', [], ['v' => (new \App\Services\DynamicStyles())->version()]);
     }
 
+    /**
+     * The `action` for a form submitted with GET.
+     *
+     * A GET form throws away the query string in its action and replaces it
+     * with its own fields, so in query mode the route would be lost and the
+     * submission would land on the board index. The action therefore points at
+     * the entry script alone, and routeField() below carries the route as a
+     * field like any other.
+     *
+     * @param array<string,string|int> $parameters
+     */
+    public function formAction(string $name, array $parameters = []): string
+    {
+        if (Url::mode() === Url::MODE_QUERY) {
+            return Url::entrypoint();
+        }
+
+        return Url::route($name, $parameters);
+    }
+
+    /**
+     * The hidden field that carries the route through a GET form.
+     *
+     * Empty in the modes where the address already holds the path.
+     *
+     * @param array<string,string|int> $parameters
+     */
+    public function routeField(string $name, array $parameters = []): string
+    {
+        if (Url::mode() !== Url::MODE_QUERY) {
+            return '';
+        }
+
+        $path = Url::pathOf($name);
+
+        foreach ($parameters as $key => $value) {
+            $path = preg_replace(
+                '/\{' . preg_quote((string) $key, '/') . '(?::[^}]*)?\}/',
+                str_replace(['/', '%'], '', (string) $value),
+                $path,
+            ) ?? $path;
+        }
+
+        $path = preg_replace('/\{[^}]*\}/', '', $path) ?? $path;
+
+        return sprintf(
+            '<input type="hidden" name="%s" value="%s">',
+            Url::ROUTE_PARAMETER,
+            $this->e($path),
+        );
+    }
+
     /** The class that paints a name in its role's colour. */
     public function roleClass(mixed $roleId): string
     {

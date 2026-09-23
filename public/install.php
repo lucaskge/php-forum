@@ -121,7 +121,13 @@ $noticeType = 'info';
 $step = 'requirements';
 $result = null;
 
-$dbInput = $_SESSION['db'] ?? ['host' => '127.0.0.1', 'port' => '3306', 'database' => 'coldwire', 'username' => '', 'password' => ''];
+$dbInput = $_SESSION['db'] ?? [
+    'host' => $installer->suggestedDatabaseHost(),
+    'port' => '3306',
+    'database' => 'coldwire',
+    'username' => '',
+    'password' => '',
+];
 $siteInput = $_SESSION['site'] ?? ['site_name' => 'Coldwire', 'site_url' => '', 'url_mode' => 'query'];
 $adminInput = $_SESSION['admin'] ?? ['username' => '', 'email' => ''];
 
@@ -345,12 +351,19 @@ $stepOrder = ['requirements' => 'Requirements', 'database' => 'Database', 'detai
     </section>
 
 <?php elseif ($step === 'requirements'): ?>
+<?php
+    $required = array_values(array_filter($checks, static fn (array $c): bool => $c['required']));
+    $optional = array_values(array_filter($checks, static fn (array $c): bool => !$c['required']));
+?>
     <section class="panel">
-        <header class="panel-head"><h2 class="panel-title">Server requirements</h2></header>
+        <header class="panel-head">
+            <h2 class="panel-title">Required</h2>
+            <span class="panel-meta mono">the board cannot run without these</span>
+        </header>
         <ul class="check-list">
-<?php foreach ($checks as $check): ?>
+<?php foreach ($required as $check): ?>
             <li>
-                <span class="check-mark <?= $check['ok'] ? 'check-ok' : ($check['required'] ? 'check-bad' : 'check-warn') ?>"><?= $check['ok'] ? 'ok' : ($check['required'] ? 'fail' : 'warn') ?></span>
+                <span class="check-mark <?= $check['ok'] ? 'check-ok' : 'check-bad' ?>"><?= $check['ok'] ? 'ok' : 'fail' ?></span>
                 <span class="check-body">
                     <?= e($check['label']) ?>
                     <span class="check-detail"><?= e($check['detail']) ?></span>
@@ -358,6 +371,28 @@ $stepOrder = ['requirements' => 'Requirements', 'database' => 'Database', 'detai
             </li>
 <?php endforeach; ?>
         </ul>
+    </section>
+
+    <section class="panel">
+        <header class="panel-head">
+            <h2 class="panel-title">Optional</h2>
+            <span class="panel-meta mono">installation continues either way</span>
+        </header>
+        <ul class="check-list">
+<?php foreach ($optional as $check): ?>
+            <li>
+                <span class="check-mark <?= $check['ok'] ? 'check-ok' : 'check-warn' ?>"><?= $check['ok'] ? 'ok' : 'off' ?></span>
+                <span class="check-body">
+                    <?= e($check['label']) ?>
+                    <span class="check-detail"><?= e($check['detail']) ?></span>
+                </span>
+            </li>
+<?php endforeach; ?>
+        </ul>
+        <p class="panel-note muted">
+            Nothing here blocks you. Each line says what you lose if it stays off, so you can
+            decide whether it is worth asking your host for &mdash; or simply go without.
+        </p>
     </section>
 
     <form method="post">
@@ -397,6 +432,13 @@ $stepOrder = ['requirements' => 'Requirements', 'database' => 'Database', 'detai
                     Created for you if your account may create databases. On shared hosting it usually
                     may not — create it in your panel and put its name here.
                 </p>
+<?php if ($dbInput['host'] === 'host.docker.internal'): ?>
+                <p class="field-hint">
+                    This page is running in a container, so the host above points at the machine hosting
+                    it rather than at the container itself. If your database runs in another container on
+                    the same network, use that container's name instead.
+                </p>
+<?php endif; ?>
 <?php if (isset($errors['database'])): ?><p class="field-error"><?= e($errors['database']) ?></p><?php endif; ?>
             </div>
 

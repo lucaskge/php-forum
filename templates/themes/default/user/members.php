@@ -12,7 +12,8 @@
 </header>
 
 <section class="panel">
-    <form class="filter-bar" action="<?= $this->e($this->route('members')) ?>" method="get">
+    <form class="filter-bar" action="<?= $this->e($this->formAction('members')) ?>" method="get">
+        <?= $this->routeField('members') ?>
         <div class="field field-inline">
             <label class="field-label" for="q">Search</label>
             <input class="field-input" type="search" id="q" name="q" value="<?= $this->e($search) ?>" maxlength="64" placeholder="username">

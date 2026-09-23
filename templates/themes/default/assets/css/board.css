@@ -1692,3 +1692,32 @@ a.metric:hover { border-color: var(--accent-soft); background: var(--surface-hov
     color: var(--ink-faint);
     font-size: 11px;
 }
+
+/* --- 34. Additional content tags ---------------------------------------- */
+
+/*
+ * Styling for the tags registered in App\Support\ContentFormatter::INLINE_TAGS.
+ * Classes rather than inline styles: the Content-Security-Policy refuses
+ * `style` attributes, so a new tag that needs colour gets a rule here.
+ */
+.content-mark {
+    padding: 0 3px;
+    background: var(--accent-faint);
+    border-radius: var(--radius);
+    color: var(--ink-strong);
+}
+
+.content-center { display: block; text-align: center; }
+
+/* --- 35. Account restriction -------------------------------------------- */
+
+/*
+ * Deliberately hard to miss and present on every page: a member serving a
+ * suspension should never have to work out why the board stopped responding.
+ */
+.account-restriction {
+    margin-top: 14px;
+    border-left-width: 3px;
+}
+
+.profile-signature { color: var(--ink-dim); font-size: 12.5px; }

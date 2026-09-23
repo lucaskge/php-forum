@@ -23,13 +23,14 @@ final class ReportRepository extends Repository
         return $this->db->selectOne(
             'SELECT rp.*, r.username AS reporter_username, r.primary_role_id AS reporter_role_id,
                     ru.username AS reported_username, ru.primary_role_id AS reported_role_id,
-                    h.username AS handler_username
+                    h.username AS handler_username, rt.slug AS content_topic_slug
              FROM reports rp
              LEFT JOIN users r ON r.id = rp.reporter_id
              LEFT JOIN users ru ON ru.id = rp.reported_user_id
              LEFT JOIN users h ON h.id = rp.handled_by
+             LEFT JOIN topics rt ON rt.id = rp.content_id AND rp.content_type = :topic_type
              WHERE rp.id = :id',
-            ['id' => $id],
+            ['id' => $id, 'topic_type' => 'topic'],
         );
     }
 
@@ -44,13 +45,18 @@ final class ReportRepository extends Repository
         $rows = $this->db->select(
             'SELECT rp.*, r.username AS reporter_username, r.primary_role_id AS reporter_role_id,
                     ru.username AS reported_username, ru.primary_role_id AS reported_role_id,
-                    h.username AS handler_username
+                    h.username AS handler_username, rt.slug AS content_topic_slug
              FROM reports rp
              LEFT JOIN users r ON r.id = rp.reporter_id
              LEFT JOIN users ru ON ru.id = rp.reported_user_id
              LEFT JOIN users h ON h.id = rp.handled_by
+             LEFT JOIN topics rt ON rt.id = rp.content_id AND rp.content_type = :topic_type
              WHERE ' . $where . ' ORDER BY rp.created_at DESC LIMIT :limit OFFSET :offset',
-            array_merge($bindings, ['limit' => $perPage, 'offset' => Paginator::offset($page, $perPage)]),
+            array_merge($bindings, [
+                'topic_type' => 'topic',
+                'limit' => $perPage,
+                'offset' => Paginator::offset($page, $perPage),
+            ]),
         );
 
         return new Paginator($rows, $total, $perPage, $page, $baseUrl, $status === 'all' ? [] : ['status' => $status]);

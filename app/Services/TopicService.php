@@ -32,6 +32,8 @@ final class TopicService
 
     private SettingsService $settings;
 
+    private ContentFilter $filter;
+
     public function __construct(
         ?TopicRepository $topics = null,
         ?PostRepository $posts = null,
@@ -39,6 +41,7 @@ final class TopicService
         ?UserRepository $users = null,
         ?NotificationService $notifications = null,
         ?SettingsService $settings = null,
+        ?ContentFilter $filter = null,
     ) {
         $this->topics = $topics ?? new TopicRepository();
         $this->posts = $posts ?? new PostRepository();
@@ -46,6 +49,7 @@ final class TopicService
         $this->users = $users ?? new UserRepository();
         $this->notifications = $notifications ?? new NotificationService();
         $this->settings = $settings ?? SettingsService::instance();
+        $this->filter = $filter ?? new ContentFilter();
     }
 
     /**
@@ -53,6 +57,9 @@ final class TopicService
      */
     public function createTopic(int $forumId, int $userId, string $title, string $content, string $ip, bool $subscribe = true): array
     {
+        // Everything written to the board passes through the filter first.
+        $content = $this->filter->clean($content);
+
         return Database::instance()->transaction(function () use ($forumId, $userId, $title, $content, $ip, $subscribe): array {
             $slug = $this->topics->uniqueSlug(Str::slug(Str::limit($title, 80, '')));
 
@@ -94,6 +101,7 @@ final class TopicService
     {
         $topicId = (int) $topic['id'];
         $forumId = (int) $topic['forum_id'];
+        $content = $this->filter->clean($content);
 
         $postId = Database::instance()->transaction(function () use ($topicId, $forumId, $userId, $content, $ip, $subscribe): int {
             $postId = $this->posts->create([
@@ -120,6 +128,7 @@ final class TopicService
         $author = $this->users->find($userId);
         $authorName = (string) ($author['username'] ?? 'Someone');
 
+        // One call, so one post cannot produce two alerts for the same person.
         $this->notifications->dispatchForReply(
             $topic,
             $postId,
@@ -128,11 +137,8 @@ final class TopicService
             $content,
             $this->topics->subscriberIds($topicId, $userId),
             $url,
+            $quotedUserId,
         );
-
-        if ($quotedUserId !== null && $quotedUserId !== $userId) {
-            $this->notifications->notifyQuoted($quotedUserId, $userId, $authorName, (string) $topic['title'], $url);
-        }
 
         return ['post_id' => $postId, 'url' => $url];
     }
@@ -143,6 +149,7 @@ final class TopicService
     public function editPost(array $post, int $editorId, string $content, ?string $reason, string $ip): void
     {
         $postId = (int) $post['id'];
+        $content = $this->filter->clean($content);
 
         Database::instance()->transaction(function () use ($post, $postId, $editorId, $content, $reason, $ip): void {
             $this->posts->recordEdit([

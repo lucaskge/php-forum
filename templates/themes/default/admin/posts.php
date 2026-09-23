@@ -10,7 +10,8 @@
 </header>
 
 <section class="panel">
-    <form class="filter-bar" action="<?= $this->e($this->route('admin.posts')) ?>" method="get">
+    <form class="filter-bar" action="<?= $this->e($this->formAction('admin.posts')) ?>" method="get">
+        <?= $this->routeField('admin.posts') ?>
         <div class="field field-inline">
             <label class="field-label" for="q">Content contains</label>
             <input class="field-input" type="search" id="q" name="q" value="<?= $this->e((string) $filters['search']) ?>" maxlength="120">

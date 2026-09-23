@@ -249,6 +249,8 @@ final class CoreSeeder
             ['min_post_length', '5', 'integer', 'posting', 'Minimum post length', 'Characters required in a post or reply.', null, 10],
             ['edit_window_minutes', '0', 'integer', 'posting', 'Self-edit window (minutes)', 'How long members may edit their own posts. 0 means no limit.', null, 20],
             ['search_min_length', '3', 'integer', 'posting', 'Minimum search term length', null, null, 30],
+            ['censored_words', '', 'text', 'posting', 'Word filter', 'One word or phrase per line (or separated by commas). Replaced when a post is displayed, never in what is stored, so the original stays available to moderators and the list can be changed at any time. Whole words only, case and accents ignored.', null, 40],
+            ['censor_replacement', '***', 'string', 'posting', 'Replace filtered words with', 'What readers see in place of a filtered word.', null, 50],
 
             ['chat_enabled', '1', 'boolean', 'chat', 'Chat enabled', 'Turn the chat area on or off for everyone.', null, 10],
             ['chat_rules', "Keep it civil and keep it readable.\nNo flooding, no walls of text — that is what the forums are for.\nModerators can mute or remove anyone from chat without warning.", 'text', 'chat', 'Chat rules', 'Shown in the sidebar of the chat page.', null, 20],

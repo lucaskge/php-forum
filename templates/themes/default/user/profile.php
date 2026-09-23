@@ -28,6 +28,9 @@
 <?php if ($can_message): ?>
         <a class="btn btn-accent" href="<?= $this->e($this->route('messages.compose', [], ['to' => (string) $profile['username']])) ?>">Send message</a>
 <?php endif; ?>
+<?php if ($can_report): ?>
+        <a class="btn btn-quiet" href="<?= $this->e($this->route('user.report', ['username' => (string) $profile['username']])) ?>">Report</a>
+<?php endif; ?>
 <?php if ($can_moderate): ?>
         <a class="btn btn-mod" href="<?= $this->e($this->route('moderation.user', ['username' => (string) $profile['username']])) ?>">Staff view</a>
 <?php endif; ?>
@@ -40,6 +43,16 @@
         <section class="panel">
             <header class="panel-head"><h2 class="panel-title">About</h2></header>
             <div class="panel-inset post-content"><?= $this->content((string) $profile['bio']) ?></div>
+        </section>
+<?php endif; ?>
+
+<?php if (($profile['signature'] ?? '') !== ''): ?>
+        <section class="panel">
+            <header class="panel-head">
+                <h2 class="panel-title">Signature</h2>
+                <span class="panel-meta mono">appended to their posts</span>
+            </header>
+            <div class="panel-inset post-signature profile-signature"><?= $this->content((string) $profile['signature']) ?></div>
         </section>
 <?php endif; ?>
 

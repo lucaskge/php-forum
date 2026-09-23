@@ -10,7 +10,8 @@
 </header>
 
 <section class="panel">
-    <form class="filter-bar" action="<?= $this->e($this->route('moderation.log')) ?>" method="get">
+    <form class="filter-bar" action="<?= $this->e($this->formAction('moderation.log')) ?>" method="get">
+        <?= $this->routeField('moderation.log') ?>
         <div class="field field-inline">
             <label class="field-label" for="action">Action</label>
             <select class="field-input" id="action" name="action">

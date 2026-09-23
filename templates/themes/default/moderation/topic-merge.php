@@ -19,7 +19,8 @@ $slug = (string) $topic['slug'];
 </header>
 
 <section class="panel">
-    <form class="filter-bar" action="<?= $this->e($this->route('moderation.topic.merge', ['slug' => $slug])) ?>" method="get">
+    <form class="filter-bar" action="<?= $this->e($this->formAction('moderation.topic.merge', ['slug' => $slug])) ?>" method="get">
+        <?= $this->routeField('moderation.topic.merge', ['slug' => $slug]) ?>
         <div class="field field-inline">
             <label class="field-label" for="q">Find the destination topic</label>
             <input class="field-input" type="search" id="q" name="q" value="<?= $this->e($search) ?>" maxlength="120" placeholder="part of the subject" required>

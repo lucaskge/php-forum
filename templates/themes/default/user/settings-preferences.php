@@ -31,7 +31,16 @@
             <label class="check"><input type="checkbox" name="notify_replies" value="1" <?= (int) $profile['notify_replies'] === 1 ? 'checked' : '' ?>><span>Replies in topics I follow</span></label>
             <label class="check"><input type="checkbox" name="notify_mentions" value="1" <?= (int) $profile['notify_mentions'] === 1 ? 'checked' : '' ?>><span>When somebody mentions me with @name</span></label>
             <label class="check"><input type="checkbox" name="notify_quotes" value="1" <?= (int) $profile['notify_quotes'] === 1 ? 'checked' : '' ?>><span>When somebody quotes my post</span></label>
-            <label class="check"><input type="checkbox" name="notify_messages" value="1" <?= (int) $profile['notify_messages'] === 1 ? 'checked' : '' ?>><span>New private messages</span></label>
+            <label class="check">
+                <input type="checkbox" name="notify_messages" value="1" <?= (int) $profile['notify_messages'] === 1 ? 'checked' : '' ?>>
+                <span>
+                    Also list new private messages here
+                    <span class="field-hint">
+                        Off by default: your inbox already has its own unread counter in the header,
+                        so an alert about the same message is the same number twice.
+                    </span>
+                </span>
+            </label>
         </fieldset>
 
         <fieldset class="field">

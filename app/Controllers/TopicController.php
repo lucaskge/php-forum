@@ -110,6 +110,7 @@ final class TopicController extends Controller
             'is_subscribed' => $userId !== null && $this->topics->isSubscribed($userId, (int) $topic['id']),
             'is_bookmarked' => $userId !== null && $this->topics->isBookmarked($userId, (int) $topic['id']),
             'quick_reply' => $this->policy->reply($topic),
+            'replying_over_lock' => $this->policy->repliesOnlyBecauseModerator($topic),
         ]);
     }
 

@@ -91,6 +91,28 @@ final class TopicPolicy
         return $this->access->can('topic.delete.own') && (int) $topic['post_count'] <= 1;
     }
 
+    /**
+     * True when the only reason this viewer may reply is that they moderate.
+     *
+     * The board lets staff post in a closed thread on purpose — somebody has to
+     * be able to leave the note explaining why it was closed. But a normal
+     * reply box on a locked topic reads like the lock is not working, so the
+     * page says which it is.
+     *
+     * @param array<string,mixed> $topic
+     */
+    public function repliesOnlyBecauseModerator(array $topic): bool
+    {
+        if (!$this->reply($topic)) {
+            return false;
+        }
+
+        $topicClosed = (int) $topic['is_locked'] === 1 || (int) $topic['is_archived'] === 1;
+        $forumClosed = (int) ($topic['forum_locked'] ?? 0) === 1;
+
+        return ($topicClosed || $forumClosed) && $this->moderate($topic);
+    }
+
     /** @param array<string,mixed> $topic */
     public function moderate(array $topic): bool
     {

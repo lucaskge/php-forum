@@ -13,7 +13,8 @@
 </header>
 
 <section class="panel">
-    <form class="search-form" action="<?= $this->e($this->route('search')) ?>" method="get">
+    <form class="search-form" action="<?= $this->e($this->formAction('search')) ?>" method="get">
+        <?= $this->routeField('search') ?>
         <div class="field">
             <label class="field-label" for="q">Keywords</label>
             <input class="field-input" type="search" id="q" name="q" maxlength="120" autofocus

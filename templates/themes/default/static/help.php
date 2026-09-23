@@ -10,19 +10,12 @@
         <caption class="visually-hidden">Formatting reference</caption>
         <thead><tr><th scope="col">You type</th><th scope="col">You get</th></tr></thead>
         <tbody>
-            <tr><td class="mono">[b]bold[/b]</td><td><strong>bold</strong></td></tr>
-            <tr><td class="mono">[i]italic[/i]</td><td><em>italic</em></td></tr>
-            <tr><td class="mono">[u]underline[/u]</td><td><span class="u">underline</span></td></tr>
-            <tr><td class="mono">[s]struck[/s]</td><td><del>struck</del></td></tr>
-            <tr><td class="mono">[code]monospace[/code]</td><td><code>monospace</code></td></tr>
-            <tr><td class="mono">[quote]quoted text[/quote]</td><td><em>an indented quote block</em></td></tr>
-            <tr><td class="mono">[quote=name]text[/quote]</td><td><em>a quote attributed to a member</em></td></tr>
-            <tr><td class="mono">[url=https://example.org]label[/url]</td><td>a link</td></tr>
-            <tr><td class="mono">[img]https://example.org/a.png[/img]</td><td>an image</td></tr>
-            <tr><td class="mono">[list][*]one[*]two[/list]</td><td>a bulleted list</td></tr>
-            <tr><td class="mono">[spoiler]hidden[/spoiler]</td><td>text revealed on hover or focus</td></tr>
-            <tr><td class="mono">[hr]</td><td>a horizontal rule</td></tr>
-            <tr><td class="mono">@username</td><td>a mention that notifies that member</td></tr>
+<?php foreach (App\Support\ContentFormatter::reference() as $tag): ?>
+            <tr>
+                <td class="mono"><?= $this->e($tag['example']) ?></td>
+                <td><?= $this->e($tag['describes']) ?></td>
+            </tr>
+<?php endforeach; ?>
         </tbody>
     </table>
     <p class="panel-note muted">

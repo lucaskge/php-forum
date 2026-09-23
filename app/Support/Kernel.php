@@ -121,9 +121,17 @@ final class Kernel
         $unreadMessages = 0;
         $unreadNotifications = 0;
         $pendingReports = 0;
+        $restriction = null;
 
         try {
             $user = $auth->user();
+
+            // A suspension the member cannot see is a suspension that looks
+            // like a bug: they browse as usual and find that some buttons have
+            // quietly stopped working.
+            if ($user !== null) {
+                $restriction = $auth->activeRestriction();
+            }
 
             if ($user !== null) {
                 $unreadMessages = (new MessageRepository())->unreadCount((int) $user['id']);
@@ -162,6 +170,7 @@ final class Kernel
             'unread_messages' => $unreadMessages,
             'unread_notifications' => $unreadNotifications,
             'pending_reports' => $pendingReports,
+            'account_restriction' => $restriction,
             'is_staff' => $access->canModerateAnything(),
             'is_admin' => $access->isAdministrator(),
             'permission_checker' => static fn (string $permission): bool => AccessControl::instance()->can($permission),

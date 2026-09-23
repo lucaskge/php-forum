@@ -25,7 +25,8 @@
     <div class="panel-shell">
         <?= $this->partial('partials/admin-sidebar') ?>
         <div class="panel-content">
-            <?= $this->partial('partials/flash') ?>
+            <?= $this->partial('partials/restriction-banner') ?>
+    <?= $this->partial('partials/flash') ?>
             <main id="main">
                 <?= $content ?>
             </main>

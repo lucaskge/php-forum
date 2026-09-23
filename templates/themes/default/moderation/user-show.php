@@ -77,6 +77,12 @@ $username = (string) $profile['username'];
         <form class="stacked-form panel-form" action="<?= $this->e($this->route('moderation.user.suspend', ['username' => $username])) ?>" method="post">
             <?= $this->csrf() ?>
             <h3 class="form-heading">Suspend</h3>
+            <p class="field-hint">
+                A suspended member can still sign in and read — deliberately, so they can see the
+                reason and when it ends — but cannot post, reply, send messages or use chat. They
+                are told on every page. It lifts by itself on the date below. To stop them signing
+                in at all, ban instead.
+            </p>
             <div class="form-grid">
                 <div class="field">
                     <label class="field-label" for="suspend-reason">Reason</label>
@@ -99,6 +105,9 @@ $username = (string) $profile['username'];
         <form class="stacked-form panel-form" action="<?= $this->e($this->route('moderation.user.ban', ['username' => $username])) ?>" method="post">
             <?= $this->csrf() ?>
             <h3 class="form-heading">Ban permanently</h3>
+            <p class="field-hint">
+                A ban refuses the sign-in itself, with the reason shown, and does not expire.
+            </p>
             <div class="field">
                 <label class="field-label" for="ban-reason">Reason</label>
                 <input class="field-input" type="text" id="ban-reason" name="reason" maxlength="255" required>

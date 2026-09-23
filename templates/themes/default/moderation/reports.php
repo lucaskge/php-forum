@@ -41,7 +41,16 @@
 <?php foreach ($paginator->items() as $report): ?>
             <tr>
                 <td><a href="<?= $this->e($this->route('moderation.report', ['id' => (int) $report['id']])) ?>">#<?= (int) $report['id'] ?></a></td>
-                <td class="mono"><?= $this->e((string) $report['content_type']) ?> #<?= (int) $report['content_id'] ?></td>
+                <td class="mono">
+<?php $link = $links[(int) $report['id']] ?? null; ?>
+<?php if ($link !== null): ?>
+                    <a href="<?= $this->e($link) ?>" title="Open the reported content">
+                        <?= $this->e((string) $report['content_type']) ?> #<?= (int) $report['content_id'] ?>
+                    </a>
+<?php else: ?>
+                    <span title="Nothing to open: the content is gone, or is a private message"><?= $this->e((string) $report['content_type']) ?> #<?= (int) $report['content_id'] ?></span>
+<?php endif; ?>
+                </td>
                 <td><?= $this->e($reasons[(string) $report['reason']] ?? (string) $report['reason']) ?></td>
                 <td><?= $this->username($report) ?></td>
                 <td><?= $this->username(['username' => $report['reported_username'] ?? null, 'primary_role_id' => $report['reported_role_id'] ?? null], ['fallback' => '—']) ?></td>

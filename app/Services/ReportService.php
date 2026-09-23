@@ -10,6 +10,8 @@ use App\Repositories\MessageRepository;
 use App\Repositories\PostRepository;
 use App\Repositories\ReportRepository;
 use App\Repositories\TopicRepository;
+use App\Repositories\UserRepository;
+use App\Support\Url;
 
 final class ReportService
 {
@@ -81,9 +83,64 @@ final class ReportService
             ContentType::Topic->value => $this->resolveTopic($id) ?? $missing,
             ContentType::Message->value => $this->resolveMessage($id) ?? $missing,
             ContentType::ChatMessage->value => $this->resolveChatMessage($id) ?? $missing,
-            ContentType::User->value => $missing,
+            ContentType::User->value => $this->resolveUser($report) ?? $missing,
             default => $missing,
         };
+    }
+
+    /**
+     * Where a report points, derived from the row the listing already loaded.
+     *
+     * Kept separate from resolveContent() so a list of reports does not run a
+     * query per row just to render a link.
+     *
+     * @param array<string,mixed> $report
+     */
+    public function contentUrl(array $report): ?string
+    {
+        $id = (int) $report['content_id'];
+
+        return match ((string) $report['content_type']) {
+            // The permalink controller works out which page the post is on.
+            ContentType::Post->value => Url::route('post.permalink', ['id' => $id]),
+            ContentType::Topic->value => ($report['content_topic_slug'] ?? null) === null
+                ? null
+                : Url::route('topic.show', ['slug' => (string) $report['content_topic_slug']]),
+            ContentType::ChatMessage->value => Url::route('chat'),
+            ContentType::User->value => ($report['reported_username'] ?? null) === null
+                ? null
+                : Url::route('moderation.user', ['username' => (string) $report['reported_username']]),
+            // A private message is not readable by a moderator, by design.
+            default => null,
+        };
+    }
+
+    /**
+     * A reported member. There is no "content" to quote, so the report itself
+     * carries the case and the link goes to their moderation record.
+     *
+     * @param array<string,mixed> $report
+     * @return array{label:string,excerpt:string,url:string|null,exists:bool,author:string|null}|null
+     */
+    private function resolveUser(array $report): ?array
+    {
+        $user = $report['reported_user_id'] === null
+            ? null
+            : (new UserRepository())->find((int) $report['reported_user_id']);
+
+        if ($user === null) {
+            return null;
+        }
+
+        return [
+            'label' => sprintf('The member %s', (string) $user['username']),
+            'excerpt' => (string) ($report['details'] ?? '') !== ''
+                ? (string) $report['details']
+                : 'Reported as conduct rather than a single post. The reporter’s notes are below.',
+            'url' => Url::route('moderation.user', ['username' => (string) $user['username']]),
+            'exists' => true,
+            'author' => (string) $user['username'],
+        ];
     }
 
     /** @return array{label:string,excerpt:string,url:string|null,exists:bool,author:string|null}|null */

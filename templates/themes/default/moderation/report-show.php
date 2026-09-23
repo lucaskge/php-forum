@@ -25,7 +25,7 @@
             <p class="mono muted"><?= $this->e($content['label']) ?></p>
             <div class="quoted-preview"><?= $this->content($content['excerpt']) ?></div>
 <?php if ($content['url'] !== null): ?>
-            <p><a class="btn btn-small" href="<?= $this->e($content['url']) ?>">Open in context</a></p>
+            <p><a class="btn btn-small btn-accent" href="<?= $this->e($content['url']) ?>">Open in context</a></p>
 <?php endif; ?>
         </div>
     </section>
@@ -78,9 +78,23 @@
 
             <fieldset class="field">
                 <legend class="field-label">Content action</legend>
+<?php if ((string) $report['content_type'] === 'post'): ?>
                 <label class="check"><input type="radio" name="content_action" value="none" checked><span>Leave the content alone</span></label>
                 <label class="check"><input type="radio" name="content_action" value="hide"><span>Hide it from members</span></label>
                 <label class="check"><input type="radio" name="content_action" value="delete"><span>Delete it</span></label>
+<?php else: ?>
+                <input type="hidden" name="content_action" value="none">
+                <p class="field-hint">
+                    Hiding and deleting apply to posts. This report is about
+                    <?= $this->e((string) $report['content_type']) ?>, so act on it from the
+<?php if (($report['reported_username'] ?? null) !== null): ?>
+                    <a href="<?= $this->e($this->route('moderation.user', ['username' => (string) $report['reported_username']])) ?>">member's record</a>
+<?php else: ?>
+                    relevant moderation screen
+<?php endif; ?>
+                    and record the outcome in the notes below.
+                </p>
+<?php endif; ?>
             </fieldset>
         </div>
 

@@ -17,7 +17,8 @@
 
 <section class="panel">
     <header class="panel-head"><h2 class="panel-title">Find a member</h2></header>
-    <form class="filter-bar" action="<?= $this->e($this->route('chat.moderate', ['room' => (string) $room['slug']])) ?>" method="get">
+    <form class="filter-bar" action="<?= $this->e($this->formAction('chat.moderate', ['room' => (string) $room['slug']])) ?>" method="get">
+        <?= $this->routeField('chat.moderate', ['room' => (string) $room['slug']]) ?>
         <div class="field field-inline">
             <label class="field-label" for="user">Username</label>
             <input class="field-input" type="text" id="user" name="user" maxlength="32" value="<?= $this->e($username) ?>" required>

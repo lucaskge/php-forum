@@ -65,7 +65,7 @@ CREATE TABLE users (
     notify_replies      TINYINT(1) NOT NULL DEFAULT 1,
     notify_mentions     TINYINT(1) NOT NULL DEFAULT 1,
     notify_quotes       TINYINT(1) NOT NULL DEFAULT 1,
-    notify_messages     TINYINT(1) NOT NULL DEFAULT 1,
+    notify_messages     TINYINT(1) NOT NULL DEFAULT 0,
     posts_per_page      TINYINT UNSIGNED NOT NULL DEFAULT 0,
     email_verified_at   DATETIME NULL,
     last_active_at      DATETIME NULL,

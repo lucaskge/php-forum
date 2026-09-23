@@ -24,6 +24,7 @@
 <a class="skip-link" href="#main">Skip to content</a>
 <?= $this->partial('partials/header') ?>
 <div class="shell shell-narrow">
+    <?= $this->partial('partials/restriction-banner') ?>
     <?= $this->partial('partials/flash') ?>
     <main id="main">
         <?= $content ?>

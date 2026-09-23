@@ -20,7 +20,8 @@ $pendingReports = (int) $this->shared('pending_reports', 0);
 <?php endif; ?>
         </div>
 
-        <form class="masthead-search" action="<?= $this->e($this->route('search')) ?>" method="get" role="search">
+        <form class="masthead-search" action="<?= $this->e($this->formAction('search')) ?>" method="get" role="search">
+        <?= $this->routeField('search') ?>
             <label class="visually-hidden" for="masthead-q">Search the board</label>
             <input type="search" id="masthead-q" name="q" placeholder="search…" maxlength="120" value="<?= $this->e((string) ($this->shared('search_prefill') ?? '')) ?>">
             <button type="submit">Search</button>

@@ -22,6 +22,7 @@ rendered on the last request.
 - [Architecture](#architecture)
 - [Authentication](#authentication)
 - [Permissions](#permissions)
+- [Extending the board](#extending-the-board)
 - [The theme system](#the-theme-system)
 - [Creating a theme](#creating-a-theme)
 - [Running the board](#running-the-board)
@@ -349,6 +350,27 @@ The front controller accepts the logical path three ways — the `r` parameter,
 `PATH_INFO`, or the request URI when rewriting is in place — so the same
 deployment answers all of them.
 
+### Writing a form that survives every mode
+
+A form submitted with **GET** throws away the query string in its `action` and
+replaces it with its own fields. In `query` mode that would drop the route and
+send the submission to the board index, so such a form asks the view for both
+halves:
+
+```php
+<form action="<?= $this->e($this->formAction('search')) ?>" method="get">
+    <?= $this->routeField('search') ?>
+```
+
+`formAction()` returns the entry script alone in query mode and the normal URL
+otherwise; `routeField()` emits the hidden field that carries the route, and
+nothing at all in the modes where the address already holds it. Route
+parameters go to both: `$this->formAction('chat.moderate', ['room' => $slug])`.
+
+**POST** forms need neither — a POST keeps its action exactly as written — so
+they use `$this->route(…)` as usual. A feature test renders every page with a
+GET form and fails if one carries the route in its action instead of a field.
+
 ## Architecture
 
 Request flow:
@@ -401,8 +423,28 @@ Session-based, with the usual defences wired in:
   expires after an hour, and changing a password invalidates outstanding links.
   The "did we send it" answer is identical whether or not the address exists.
 
-Suspended and banned accounts keep read access but are redirected to
-`/account/restricted` by `RestrictionMiddleware` on anything that writes.
+### Suspensions and bans
+
+The two are deliberately different:
+
+| | Sign in | Read | Post, message, chat | Ends |
+|---|---|---|---|---|
+| **Suspension** | yes | yes | no | on its own date |
+| **Ban** | **refused**, with the reason | — | — | never |
+
+A suspended member can still sign in on purpose: it is the only way they get to
+read *why* and *until when*. Locking them out instead produces a member who sees
+"wrong credentials" and concludes the board is broken.
+
+That only works if it is visible, so a restricted account is told plainly:
+signing in lands on **Your record** rather than the index, a banner naming the
+reason and the end date sits on every page, and `RestrictionMiddleware` turns
+away anything that writes.
+
+**Your record** (`/settings/record`) is the member's own copy: active
+restriction, every warning with its reason and expiry, and past restrictions.
+Warning notifications lead there — a notice with nothing to open is not a
+notice.
 
 ---
 
@@ -460,6 +502,116 @@ matrix which you then adjust on the permissions screen. Display order is edited
 inline on the forum list.
 
 ---
+
+## Extending the board
+
+Three things people want to change first, and where each one lives.
+
+### Restricting something to members, or to a role
+
+There are four levels, from coarsest to finest. Use the highest one that fits.
+
+**A whole forum** — *Admin → Forums → (forum) → permissions*. A role × forum
+grid with five flags: see the forum, read topics, start topics, reply,
+moderate. This is the one to reach for: it needs no code, and "see but not
+read" gives you a forum that is listed but closed, which is how you advertise a
+members-only area without hiding it.
+
+**A route** — in [routes/web.php](routes/web.php), on the route or a group:
+
+```php
+$router->get('/secret', [X::class, 'y'])->middleware('auth');            // signed in
+$router->get('/secret', [X::class, 'y'])->middleware('can:admin.access'); // a permission
+$router->get('/secret', [X::class, 'y'])->middleware('can:report.view|user.ban'); // any of
+```
+
+Add a new permission by inserting it in `CoreSeeder::seedPermissions()` and
+granting it to roles in the admin panel. `can:` accepts any slug; nothing else
+needs to know about it.
+
+**One object** — a policy, in [app/Policies/](app/Policies/). `TopicPolicy`,
+`PostPolicy` and `UserPolicy` answer questions like "may this viewer reply to
+*this* topic". They ask `AccessControl`, never a role name, which is why a
+permission you invent works everywhere at once.
+
+**A component on a page** — in any template:
+
+```php
+<?php if ($this->can('chat.moderate')): ?>        <!-- a permission -->
+<?php if ($this->shared('current_user') !== null): ?>  <!-- signed in at all -->
+<?php if ($this->shared('is_staff')): ?>          <!-- any moderation right -->
+```
+
+Hiding a control is presentation, not protection: guard the route or the policy
+as well, or the address still works when somebody types it.
+
+> A topic cannot be restricted individually — that is deliberate. Per-topic
+> permissions are how a board becomes impossible to reason about. Move the
+> topic into a forum with the access you want, or hide it (*Moderate → Hide*),
+> which leaves it readable by moderators only.
+
+### Processing what members write
+
+Two hooks, in [app/Services/ContentFilter.php](app/Services/ContentFilter.php),
+and they are deliberately different:
+
+| Hook | Runs | Changes | Use it for |
+|------|------|---------|-----------|
+| `clean()` | once, on save | **what is stored** | normalising: trimming, collapsing blank lines, stripping invisible characters |
+| `display()` | every render | **only what this reader sees** | word filters, anything you may want to undo or apply retroactively |
+
+`clean()` is called by `TopicService` on create, reply and edit —
+the three places content enters the database. `display()` is called by
+`ContentFormatter::render()`, on the raw source *before* any markup exists, so
+a replacement can never introduce HTML.
+
+Prefer `display()` for anything judgemental. A word filter that rewrites the
+stored text destroys the evidence a moderator needs when the member disputes it,
+and cannot be changed afterwards. The shipped filter is display-time: configure
+it under *Admin → Settings → Posting* with a word per line. Matching is
+whole-word, case- and accent-insensitive, so a short entry cannot mangle a
+longer legitimate word.
+
+To add a rule of your own, edit that one class:
+
+```php
+public function display(string $raw): string
+{
+    $raw = $this->censor($raw);
+    $raw = $this->yourOwnRule($raw);   // here
+
+    return $raw;
+}
+```
+
+### Adding a formatting tag
+
+One place: `ContentFormatter::INLINE_TAGS` in
+[app/Support/ContentFormatter.php](app/Support/ContentFormatter.php).
+
+```php
+'mark' => ['<mark class="content-mark">', '</mark>', 'highlighted'],
+//  tag      opening HTML                  closing     help text
+```
+
+That is the whole change. The editor's help panel and the
+[formatting reference](templates/themes/default/static/help.php) are both
+generated from this array, so a new tag documents itself and the two cannot
+drift apart.
+
+Two rules for anything you add:
+
+1. **The opening HTML is fixed text.** It never interpolates what the member
+   wrote. Their content is already escaped by the time these tags are applied,
+   and that is what keeps the whole scheme safe.
+2. **Style it with a class, not a `style` attribute.** The board's
+   Content-Security-Policy refuses inline styles, so a tag that needs a colour
+   gets a class here and a rule in the theme's CSS. A `style="…"` would be
+   silently dropped by the browser.
+
+Tags that take an argument or need their own parsing — `[quote=name]`,
+`[code=php]`, `[url=…]`, `[list]` — are separate methods in the same class, and
+each is listed in `reference()` so it shows up in the help.
 
 ## The theme system
 
@@ -575,17 +727,36 @@ These are the flows the project is built around; all of them work end to end.
 quote) → edit your post → subscribe/bookmark → edit your profile → upload an
 avatar → sign out.
 
-**Moderator** — sign in → `/moderation` → reports → review one → hide or delete
-the content and resolve it → open a member's record → warn/suspend → check the
-log, which now contains every one of those actions.
+**Moderator** — sign in → `/moderation` → reports → **click the reported item
+to open it in context** → hide or delete the content and resolve it → open a
+member's record → warn/suspend → check the log, which now contains every one of
+those actions.
+
+Two kinds of report arrive. A **post** report carries the post, and the review
+screen can hide or delete it in the same action that resolves the report. A
+**member** report is for conduct that is not in one post — a pattern across
+several, a name, an avatar, private messages — and requires a description,
+because without a post to look at, that description is all the moderator has.
+Members report a post from the link under it, and a member from the Report
+button on their profile. Neither can be used on yourself.
 
 **Administrator** — `/admin` → dashboard → users, roles and the permission
 matrix → categories and forums with their per-forum permissions → topics and
 posts → settings → themes → chat rooms → system information, logs and
 maintenance tasks.
 
-**Messaging** — `/messages` → compose → send → recipient sees it in their inbox
-and gets a notification → read → reply (the body arrives pre-quoted).
+**Messaging** — `/messages` → compose → send → recipient sees it in their inbox,
+with the unread count in the header → read → reply (the body arrives
+pre-quoted). No separate alert is raised: the inbox counter *is* the
+notification, and showing the same number twice is how people learn to ignore
+both. A member who would rather see everything in one list can turn that on
+under preferences.
+
+Alerts follow the same rule within a topic. One post can involve you three ways
+— you follow the topic, you were quoted, you were mentioned — and produces
+exactly one alert, naming the most specific reason: quoted, then mentioned,
+then replied. "You were quoted" tells you why to look; "somebody replied" does
+not.
 
 **Chat** — `/chat` → send a message → the page redirects and re-renders the
 transcript → moderators delete a message, mute, ban or purge a member.

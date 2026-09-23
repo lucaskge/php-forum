@@ -79,7 +79,7 @@ final class ModerationService
             $userId,
             'You received a warning',
             $reason,
-            '/notifications',
+            '/settings/record',
             $moderatorId,
             true,
         );
@@ -119,7 +119,7 @@ final class ModerationService
             $userId,
             sprintf('Your account is suspended for %d day(s)', $days),
             $reason,
-            '/notifications',
+            '/settings/record',
             $moderatorId,
             true,
         );
@@ -183,7 +183,7 @@ final class ModerationService
             $userId,
             'Your account restriction was lifted',
             'You can post on the board again.',
-            '/notifications',
+            '/settings/record',
             $moderatorId,
         );
 

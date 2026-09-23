@@ -26,7 +26,9 @@ $number = (int) $first_number;
         </p>
     </div>
     <div class="page-actions">
-<?php if ($can_reply): ?>
+<?php if ($can_reply && $replying_over_lock): ?>
+        <a class="btn btn-mod" href="<?= $this->e($this->route('topic.reply', ['slug' => (string) $topic['slug']])) ?>">Reply (locked)</a>
+<?php elseif ($can_reply): ?>
         <a class="btn btn-accent" href="<?= $this->e($this->route('topic.reply', ['slug' => (string) $topic['slug']])) ?>">Reply</a>
 <?php elseif ((int) $topic['is_locked'] === 1): ?>
         <span class="btn btn-disabled" aria-disabled="true">Topic locked</span>
@@ -65,6 +67,21 @@ $number = (int) $first_number;
 </div>
 <?php endif; ?>
 
+<?php if ($replying_over_lock): ?>
+<div class="alert alert-warning">
+    <span class="alert-tag">warn</span>
+    <span class="alert-body">
+<?php if ((int) $topic['is_locked'] === 1): ?>
+        This topic is locked. Members cannot reply — you can, because you moderate this forum.
+<?php elseif ((int) $topic['is_archived'] === 1): ?>
+        This topic is archived. Members cannot reply — you can, because you moderate this forum.
+<?php else: ?>
+        This forum is locked. Members cannot reply — you can, because you moderate it.
+<?php endif; ?>
+    </span>
+</div>
+<?php endif; ?>
+
 <?= $this->partial('partials/pagination', ['paginator' => $paginator, 'label' => 'Post pages']) ?>
 
 <div class="post-stream">
@@ -82,8 +99,13 @@ $number = (int) $first_number;
 <?= $this->partial('partials/pagination', ['paginator' => $paginator, 'label' => 'Post pages, bottom']) ?>
 
 <?php if ($quick_reply): ?>
-<section class="panel quick-reply" id="quick-reply">
-    <header class="panel-head"><h2 class="panel-title">Quick reply</h2></header>
+<section class="panel quick-reply<?= $replying_over_lock ? ' panel-mod' : '' ?>" id="quick-reply">
+    <header class="panel-head">
+        <h2 class="panel-title"><?= $replying_over_lock ? 'Quick reply — over the lock' : 'Quick reply' ?></h2>
+<?php if ($replying_over_lock): ?>
+        <span class="panel-meta mono">moderator</span>
+<?php endif; ?>
+    </header>
     <form class="stacked-form" action="<?= $this->e($this->route('topic.reply.store', ['slug' => (string) $topic['slug']])) ?>" method="post">
         <?= $this->csrf() ?>
         <?= $this->partial('partials/editor', ['name' => 'content', 'value' => '', 'label' => 'Your reply', 'rows' => 8]) ?>

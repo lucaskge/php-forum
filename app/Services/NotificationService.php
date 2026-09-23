@@ -44,31 +44,52 @@ final class NotificationService
     }
 
     /**
-     * Fan-out for a new reply: subscribers, the quoted author and anyone
-     * mentioned, each notified at most once.
+     * Everyone who should hear about one new reply — and **once** each.
+     *
+     * A single post can involve the same person several ways: they follow the
+     * topic, they were quoted in it, and they were mentioned by name. Sending
+     * three alerts for one post is noise, so each person is notified once, for
+     * the most specific reason that applies:
+     *
+     *     quoted  >  mentioned  >  follows the topic
+     *
+     * Specific first because it is more useful: "you were quoted" tells you
+     * why you should look, "somebody replied" does not.
      *
      * @param array<string,mixed> $topic
      * @param array<int,int> $subscriberIds
      */
-    public function dispatchForReply(array $topic, int $postId, int $authorId, string $authorName, string $content, array $subscriberIds, string $postUrl): void
-    {
+    public function dispatchForReply(
+        array $topic,
+        int $postId,
+        int $authorId,
+        string $authorName,
+        string $content,
+        array $subscriberIds,
+        string $postUrl,
+        ?int $quotedUserId = null,
+    ): void {
+        $title = (string) $topic['title'];
+        $excerpt = ContentFormatter::plain($content);
+
+        // The author never hears about their own post.
         $notified = [$authorId => true];
 
-        foreach ($subscriberIds as $subscriberId) {
-            if (isset($notified[$subscriberId])) {
-                continue;
+        if ($quotedUserId !== null && !isset($notified[$quotedUserId])) {
+            $quoted = $this->users->find($quotedUserId);
+
+            if ($quoted !== null && (int) $quoted['notify_quotes'] === 1) {
+                $notified[$quotedUserId] = true;
+
+                $this->push(
+                    $quotedUserId,
+                    NotificationType::Quote,
+                    sprintf('%s quoted you in “%s”', $authorName, $title),
+                    $excerpt,
+                    $postUrl,
+                    $authorId,
+                );
             }
-
-            $notified[$subscriberId] = true;
-
-            $this->push(
-                $subscriberId,
-                NotificationType::Reply,
-                sprintf('%s replied in “%s”', $authorName, (string) $topic['title']),
-                ContentFormatter::plain($content),
-                $postUrl,
-                $authorId,
-            );
         }
 
         foreach ($this->mentionedUsers($content) as $user) {
@@ -83,32 +104,39 @@ final class NotificationService
             $this->push(
                 $userId,
                 NotificationType::Mention,
-                sprintf('%s mentioned you in “%s”', $authorName, (string) $topic['title']),
-                ContentFormatter::plain($content),
+                sprintf('%s mentioned you in “%s”', $authorName, $title),
+                $excerpt,
+                $postUrl,
+                $authorId,
+            );
+        }
+
+        foreach ($subscriberIds as $subscriberId) {
+            if (isset($notified[$subscriberId])) {
+                continue;
+            }
+
+            $notified[$subscriberId] = true;
+
+            $this->push(
+                $subscriberId,
+                NotificationType::Reply,
+                sprintf('%s replied in “%s”', $authorName, $title),
+                $excerpt,
                 $postUrl,
                 $authorId,
             );
         }
     }
 
-    public function notifyQuoted(int $quotedUserId, int $actorId, string $actorName, string $topicTitle, string $postUrl): void
-    {
-        $user = $this->users->find($quotedUserId);
-
-        if ($user === null || (int) $user['notify_quotes'] === 0) {
-            return;
-        }
-
-        $this->push(
-            $quotedUserId,
-            NotificationType::Quote,
-            sprintf('%s quoted you in “%s”', $actorName, $topicTitle),
-            'Your post was quoted in a reply.',
-            $postUrl,
-            $actorId,
-        );
-    }
-
+    /**
+     * A new private message.
+     *
+     * Off unless the member asks for it. The inbox has its own unread counter
+     * in the header, so an alert about the same message is the same number
+     * twice — which is exactly the kind of noise that teaches people to ignore
+     * the counter.
+     */
     public function notifyMessage(int $recipientId, int $senderId, string $senderName, string $subject, int $messageId): void
     {
         $user = $this->users->find($recipientId);

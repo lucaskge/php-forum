@@ -27,18 +27,9 @@ $error = $errors[$name] ?? null;
     <details class="format-help">
         <summary>Formatting tags</summary>
         <ul class="format-list">
-            <li><code>[b]bold[/b]</code></li>
-            <li><code>[i]italic[/i]</code></li>
-            <li><code>[u]underline[/u]</code></li>
-            <li><code>[s]struck[/s]</code></li>
-            <li><code>[code]code block[/code]</code></li>
-            <li><code>[code=php]with a language[/code]</code></li>
-            <li><code>[quote]quoted[/quote]</code></li>
-            <li><code>[url=https://…]label[/url]</code></li>
-            <li><code>[img]https://…[/img]</code></li>
-            <li><code>[list][*]item[/list]</code></li>
-            <li><code>[spoiler]hidden[/spoiler]</code></li>
-            <li><code>@username</code></li>
+<?php foreach (App\Support\ContentFormatter::reference() as $tag): ?>
+            <li><code><?= $this->e($tag['example']) ?></code></li>
+<?php endforeach; ?>
         </ul>
         <p class="field-hint">
             Every tag except <code>[*]</code> and <code>[hr]</code> must be closed with its

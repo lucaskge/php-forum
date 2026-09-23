@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Support;
 
+use App\Services\ContentFilter;
+
 /**
  * Renders the forum's markup dialect to HTML.
  *
@@ -18,6 +20,11 @@ final class ContentFormatter
 {
     public static function render(string $raw): string
     {
+        // The display-time hook. It works on the raw source, before any markup
+        // exists, so a replacement can never introduce HTML — the escaping
+        // below still applies to whatever it returned.
+        $raw = (new ContentFilter())->display($raw);
+
         $text = htmlspecialchars($raw, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
         // Code blocks are pulled out before anything else so their contents are
@@ -89,21 +96,79 @@ final class ContentFormatter
         return array_values(array_unique($matches[1] ?? []));
     }
 
+    /**
+     * The paired tags members can use, and what each becomes.
+     *
+     * This is the place to add one. An entry is the tag name mapped to the
+     * HTML that opens it, the HTML that closes it, and the line shown in the
+     * editor's help — the help is generated from here, so a new tag documents
+     * itself and the two can never drift apart.
+     *
+     *     'mark' => ['<mark>', '</mark>', 'highlighted'],
+     *
+     * Two rules for anything added here:
+     *
+     *   1. The opening HTML is fixed text. It never interpolates anything the
+     *      member wrote, which is what keeps this safe: their content is
+     *      already escaped by the time these tags are applied.
+     *   2. Style it with a class, not a `style` attribute. The board's
+     *      Content-Security-Policy refuses inline styles, so a tag that needs
+     *      a colour gets a class here and a rule in the theme's CSS.
+     *
+     * @var array<string,array{0:string,1:string,2:string}>
+     */
+    public const INLINE_TAGS = [
+        'b' => ['<strong>', '</strong>', 'bold'],
+        'i' => ['<em>', '</em>', 'italic'],
+        'u' => ['<span class="u">', '</span>', 'underline'],
+        's' => ['<del>', '</del>', 'struck through'],
+        'mark' => ['<mark class="content-mark">', '</mark>', 'highlighted'],
+        'sub' => ['<sub>', '</sub>', 'subscript'],
+        'sup' => ['<sup>', '</sup>', 'superscript'],
+        'center' => ['<span class="content-center">', '</span>', 'centred'],
+        'spoiler' => ['<span class="spoiler" tabindex="0">', '</span>', 'hidden until hovered'],
+    ];
+
     private static function inlineTags(string $text): string
     {
-        $replacements = [
-            '/\[b\](.*?)\[\/b\]/is' => '<strong>$1</strong>',
-            '/\[i\](.*?)\[\/i\]/is' => '<em>$1</em>',
-            '/\[u\](.*?)\[\/u\]/is' => '<span class="u">$1</span>',
-            '/\[s\](.*?)\[\/s\]/is' => '<del>$1</del>',
-            '/\[spoiler\](.*?)\[\/spoiler\]/is' => '<span class="spoiler" tabindex="0">$1</span>',
-        ];
-
-        foreach ($replacements as $pattern => $replacement) {
-            $text = preg_replace($pattern, $replacement, $text) ?? $text;
+        foreach (self::INLINE_TAGS as $tag => [$open, $close]) {
+            $pattern = '/\[' . preg_quote($tag, '/') . '\](.*?)\[\/' . preg_quote($tag, '/') . '\]/is';
+            $text = preg_replace($pattern, $open . '$1' . $close, $text) ?? $text;
         }
 
         return $text;
+    }
+
+    /**
+     * The full tag reference, for the editor help and the help page.
+     *
+     * Generated from the registry above plus the tags that take an argument or
+     * a body of their own, so the documentation cannot fall behind the code.
+     *
+     * @return array<int,array{example:string,describes:string}>
+     */
+    public static function reference(): array
+    {
+        $reference = [];
+
+        foreach (self::INLINE_TAGS as $tag => [, , $describes]) {
+            $reference[] = [
+                'example' => sprintf('[%s]%s[/%s]', $tag, $describes, $tag),
+                'describes' => $describes,
+            ];
+        }
+
+        return array_merge($reference, [
+            ['example' => '[code]a code block[/code]', 'describes' => 'monospaced, highlighted'],
+            ['example' => '[code=php]with a language[/code]', 'describes' => 'labelled with its language'],
+            ['example' => '[quote]quoted text[/quote]', 'describes' => 'an indented quote'],
+            ['example' => '[quote=name]quoted text[/quote]', 'describes' => 'attributed to a member'],
+            ['example' => '[url=https://…]label[/url]', 'describes' => 'a link'],
+            ['example' => '[img]https://…[/img]', 'describes' => 'an image'],
+            ['example' => '[list][*]one[*]two[/list]', 'describes' => 'a bulleted list'],
+            ['example' => '[hr]', 'describes' => 'a horizontal rule, needs no closing tag'],
+            ['example' => '@username', 'describes' => 'a mention that notifies that member'],
+        ]);
     }
 
     private static function quotes(string $text): string

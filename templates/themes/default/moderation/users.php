@@ -10,7 +10,8 @@
 </header>
 
 <section class="panel">
-    <form class="filter-bar" action="<?= $this->e($this->route('moderation.users')) ?>" method="get">
+    <form class="filter-bar" action="<?= $this->e($this->formAction('moderation.users')) ?>" method="get">
+        <?= $this->routeField('moderation.users') ?>
         <div class="field field-inline">
             <label class="field-label" for="q">Search</label>
             <input class="field-input" type="search" id="q" name="q" value="<?= $this->e($search) ?>" maxlength="64">

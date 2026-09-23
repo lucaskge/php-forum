@@ -37,6 +37,25 @@ final class UserPolicy
             && UserStatus::tryFrom((string) $target['status'])?->canParticipate() === true;
     }
 
+    /**
+     * Reporting a member, rather than one of their posts.
+     *
+     * For conduct that is not in a single post: a pattern across several, a
+     * name, an avatar, messages sent privately. Staff are reportable too — the
+     * report goes to the queue every moderator sees, and an administrator can
+     * act on it.
+     *
+     * @param array<string,mixed> $target
+     */
+    public function report(array $target): bool
+    {
+        $viewerId = $this->access->id();
+
+        return $viewerId !== null
+            && $this->access->can('report.create')
+            && (int) $target['id'] !== $viewerId;
+    }
+
     /** @param array<string,mixed> $target */
     public function warn(array $target): bool
     {

@@ -27,6 +27,7 @@
 <a class="skip-link" href="#main">Skip to content</a>
 <?= $this->partial('partials/header') ?>
 <div class="shell">
+    <?= $this->partial('partials/restriction-banner') ?>
     <?= $this->partial('partials/breadcrumbs') ?>
     <?= $this->partial('partials/flash') ?>
     <main id="main" class="board-main">

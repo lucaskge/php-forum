@@ -21,6 +21,7 @@ declare(strict_types=1);
  */
 
 use App\Controllers\Admin;
+use App\Controllers\AccountController;
 use App\Controllers\AssetController;
 use App\Controllers\AuthController;
 use App\Controllers\ChatController;
@@ -128,6 +129,10 @@ $router->group(['middleware' => ['csrf', 'maintenance']], function (App\Support\
     $router->get('/user/{username}/topics', [UserController::class, 'topics'])->name('user.topics');
     $router->get('/user/{username}/posts', [UserController::class, 'posts'])->name('user.posts');
     $router->get('/user/{username}/activity', [UserController::class, 'activity'])->name('user.activity');
+    $router->get('/user/{username}/report', [UserController::class, 'reportForm'])
+        ->middleware(['auth', 'can:report.create'])->name('user.report');
+    $router->post('/user/{username}/report', [UserController::class, 'report'])
+        ->middleware(['auth', 'restricted', 'can:report.create', 'throttle:report'])->name('user.report.store');
 
     $router->group(['prefix' => 'settings', 'middleware' => 'auth'], function (App\Support\Router $router): void {
         $router->get('/profile', [SettingsController::class, 'profileForm'])->name('settings.profile');
@@ -143,6 +148,7 @@ $router->group(['middleware' => ['csrf', 'maintenance']], function (App\Support\
         $router->post('/preferences', [SettingsController::class, 'updatePreferences'])->name('settings.preferences.save');
         $router->get('/subscriptions', [SettingsController::class, 'subscriptions'])->name('settings.subscriptions');
         $router->get('/bookmarks', [SettingsController::class, 'bookmarks'])->name('settings.bookmarks');
+        $router->get('/record', [AccountController::class, 'record'])->name('settings.record');
     });
 
     // -----------------------------------------------------------------------
@@ -152,7 +158,8 @@ $router->group(['middleware' => ['csrf', 'maintenance']], function (App\Support\
     $router->group(['prefix' => 'messages', 'middleware' => ['auth', 'can:message.send']], function (App\Support\Router $router): void {
         $router->get('/', [MessageController::class, 'inbox'])->name('messages.inbox');
         $router->get('/sent', [MessageController::class, 'sent'])->name('messages.sent');
-        $router->get('/compose', [MessageController::class, 'composeForm'])->name('messages.compose');
+        $router->get('/compose', [MessageController::class, 'composeForm'])
+            ->middleware('restricted')->name('messages.compose');
         $router->post('/compose', [MessageController::class, 'send'])
             ->middleware(['restricted', 'throttle:message'])->name('messages.send');
         $router->get('/{id:\d+}', [MessageController::class, 'show'])->name('messages.show');

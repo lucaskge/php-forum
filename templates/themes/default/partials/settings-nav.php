@@ -8,6 +8,7 @@ $items = [
     ['label' => 'Preferences', 'url' => $this->route('settings.preferences')],
     ['label' => 'Subscriptions', 'url' => $this->route('settings.subscriptions')],
     ['label' => 'Bookmarks', 'url' => $this->route('settings.bookmarks')],
+    ['label' => 'Your record', 'url' => $this->route('settings.record')],
 ];
 $path = (string) $this->shared('current_path');
 ?>
