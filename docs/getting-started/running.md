@@ -56,6 +56,74 @@ either.
     `docker compose --profile docs down` — which is exactly what `make down`
     does.
 
+## Stopping only the server
+
+```bash
+make serve-stop      # the board stops; the documentation keeps running
+make serve-start     # it comes back
+```
+
+There is a subtlety worth knowing, because it decides what is possible here:
+**the container's only process is the PHP server.** `docker-compose.yml` runs
+
+```yaml
+command: php -S 0.0.0.0:8080 -t /app/public /app/public/router.php
+```
+
+as PID 1, so the server and the container live and die together. There is no
+way to kill the server and leave the container up — killing it *is* stopping
+the container. `make serve-stop` therefore stops the container, and
+`make serve-start` brings it back in about a second. In practice that is what
+"stop the server" means here.
+
+To bounce it after changing `.env` or anything in `config/`, use
+`make restart` — templates, PHP classes and CSS are read from the mounted
+volume on every request and need no restart at all.
+
+## Moving a server to another port
+
+```bash
+make up PORT=8081        # board on http://127.0.0.1:8081
+make docs PORT=8200      # documentation on http://127.0.0.1:8200
+```
+
+`PORT=` applies only to the target you ran, so moving the board never drags the
+documentation along with it. The container is recreated, which takes a second;
+what is inside it does not change — internally the board is always on 8080.
+
+To make a port stick, put it in `.env` instead:
+
+```bash
+APP_PORT=8081
+DOCS_PORT=8200
+```
+
+Docker Compose reads `.env` on its own, so from then on a plain `make up` uses
+your port.
+
+!!! warning "Also update `APP_URL`"
+    `APP_URL` in `.env` is what the board uses to build absolute addresses —
+    canonical links, the URLs inside notification emails. Moving the published
+    port without changing it leaves those pointing at the old one:
+
+    ```bash
+    APP_PORT=8081
+    APP_URL=http://localhost:8081
+    ```
+
+    Ordinary links between pages are relative and keep working either way,
+    which is what makes this easy to miss.
+
+### When the port is already taken
+
+`make up` fails with `port is already allocated`. Find what holds it:
+
+```bash
+ss -ltnp | grep 8080
+```
+
+Then either stop that, or pick another port with `PORT=`.
+
 ## The commands you run most
 
 Each runs inside the app container, so no PHP on the host is needed:
@@ -80,15 +148,3 @@ mkdocs serve                              # documentation, 127.0.0.1:8000
 Stop either with Ctrl+C. Both are development servers — for production, serve
 `public/` with Apache or nginx as described in
 [Installation](installation.md).
-
-## When something is already using a port
-
-`make up` fails with `port is already allocated` if 8080 is taken. Find what
-holds it:
-
-```bash
-ss -ltnp | grep 8080
-```
-
-Then either stop that, or change the published port in `docker-compose.yml`
-(`"8081:8080"`) and set `APP_URL` in `.env` to match.

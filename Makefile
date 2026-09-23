@@ -12,6 +12,17 @@
 # two jobs without Docker.
 # ---------------------------------------------------------------------------
 
+# Published ports. Set them for good in .env (APP_PORT / DOCS_PORT), or move one
+# for a single command with PORT= — which applies only to the target you ran, so
+# `make up PORT=8081` never drags the documentation along with it.
+APP_PORT     ?= 8080
+DOCS_PORT    ?= 8100
+export APP_PORT
+export DOCS_PORT
+
+up serve-start restart: APP_PORT := $(or $(PORT),$(APP_PORT))
+docs: DOCS_PORT := $(or $(PORT),$(DOCS_PORT))
+
 COMPOSE      := docker compose
 COMPOSE_ALL  := docker compose --profile docs
 CONSOLE      := $(COMPOSE) run --rm app php bin/console
@@ -24,17 +35,18 @@ help: ## Show this list
 	@echo
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | awk -F ':.*?## ' '{printf "  %-12s %s\n", $$1, $$2}'
 	@echo
-	@echo '  board  http://127.0.0.1:8080        docs  http://127.0.0.1:8100'
+	@echo '  board  http://127.0.0.1:$(APP_PORT)        docs  http://127.0.0.1:$(DOCS_PORT)'
+	@echo '  move either one with  PORT=  e.g.  make up PORT=8081'
 
 # --- the two servers -------------------------------------------------------
 
-up: ## Start the board (http://127.0.0.1:8080)
+up: ## Start the board — make up PORT=8081 to publish it elsewhere
 	@$(COMPOSE) up -d app
-	@echo 'Board on http://127.0.0.1:8080'
+	@echo 'Board on http://127.0.0.1:$(APP_PORT)'
 
-docs: ## Start the documentation (http://127.0.0.1:8100)
+docs: ## Start the documentation — make docs PORT=8200 to publish it elsewhere
 	@$(COMPOSE_ALL) up -d docs
-	@echo 'Documentation on http://127.0.0.1:8100 — it rebuilds as you edit /docs'
+	@echo 'Documentation on http://127.0.0.1:$(DOCS_PORT) — it rebuilds as you edit /docs'
 
 docs-stop: ## Stop the documentation, leave the board running
 	@$(COMPOSE) stop docs
@@ -46,8 +58,18 @@ start: ## Start both again after `make stop`
 	@$(COMPOSE_ALL) start
 	@echo 'Board http://127.0.0.1:8080 · Documentation http://127.0.0.1:8100'
 
-restart: ## Restart both
+restart: ## Restart both — the quickest way to bounce the server itself
 	@$(COMPOSE_ALL) restart
+
+# The container's only process IS the PHP server, so there is no way to stop one
+# and keep the other. `restart` bounces it in about a second, which is what
+# "restart the server" means here.
+serve-stop: ## Stop the board's server, keep the container (see `make status`)
+	@$(COMPOSE) stop app
+
+serve-start: ## Start it again — make serve-start PORT=8081 to move it
+	@$(COMPOSE) up -d app
+	@echo 'Board on http://127.0.0.1:$(APP_PORT)'
 
 # `docker compose down` on its own leaves the docs container behind and then
 # fails to remove the network; the profile has to be named for a clean sweep.

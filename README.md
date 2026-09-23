@@ -58,6 +58,28 @@ make down       # stop and remove the containers
 | Remove everything | `make down` | `docker compose --profile docs down` |
 | Watch the logs | `make logs` | `docker compose --profile docs logs -f` |
 
+### Stopping just one of them, or moving it
+
+```bash
+make serve-stop          # stop the board, leave the documentation running
+make serve-start         # bring it back
+make up   PORT=8081      # board on http://127.0.0.1:8081
+make docs PORT=8200      # documentation on http://127.0.0.1:8200
+```
+
+`PORT=` applies only to the target you ran, so moving the board never drags the
+documentation with it. To make a port stick, set `APP_PORT` / `DOCS_PORT` in
+`.env` — Compose reads it on its own — and **change `APP_URL` to match**, since
+that is what builds canonical links and the URLs inside emails.
+
+One thing worth knowing: the container's only process is the PHP server
+(`command: php -S …` runs as PID 1), so the two live and die together. There is
+no way to stop the server and keep the container up — killing it *is* stopping
+the container. `make serve-stop` stops it, `make serve-start` brings it back in
+about a second, and `make restart` bounces it after an `.env` or `config/`
+change. Templates, PHP classes and CSS come from the mounted volume on every
+request and never need a restart.
+
 **`stop` versus `down`.** `stop` halts the containers and keeps them, so
 `make start` is instant. `down` removes them and the network; the next `make up`
 recreates them, which takes a few seconds. Neither touches the database — that

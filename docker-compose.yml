@@ -28,7 +28,10 @@ services:
     volumes:
       - .:/app
     ports:
-      - "8080:8080"
+      # The published port is a variable, so the board can move without editing
+      # this file:  make up PORT=8081  (or set APP_PORT in .env to make it stick).
+      # Only the left-hand side changes; inside the container it is always 8080.
+      - "${APP_PORT:-8080}:8080"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     command: php -S 0.0.0.0:8080 -t /app/public /app/public/router.php
@@ -48,5 +51,5 @@ services:
     volumes:
       - .:/docs:ro
     ports:
-      - "8100:8000"
+      - "${DOCS_PORT:-8100}:8000"
     command: serve --dev-addr 0.0.0.0:8000
