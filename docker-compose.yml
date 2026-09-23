@@ -32,3 +32,21 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     command: php -S 0.0.0.0:8080 -t /app/public /app/public/router.php
+
+  # Documentation server. Behind a profile, so it never starts with a plain
+  # `docker compose up` and never counts as an orphan on other commands:
+  #
+  #   docker compose --profile docs up -d docs
+  #   open http://127.0.0.1:8100
+  #
+  # The project is mounted read-only; the server renders /docs and rebuilds on
+  # every change. No Python, pip or mkdocs on the host is involved.
+  docs:
+    image: squidfunk/mkdocs-material:latest
+    profiles: ["docs"]
+    working_dir: /docs
+    volumes:
+      - .:/docs:ro
+    ports:
+      - "8100:8000"
+    command: serve --dev-addr 0.0.0.0:8000

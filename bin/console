@@ -4,15 +4,9 @@
 /**
  * Coldwire — command line tool.
  *
- *   php bin/console migrate            apply pending migrations
- *   php bin/console migrate:fresh      drop everything and migrate from zero
- *   php bin/console db:seed            load the demo data
- *   php bin/console install            fresh migrate + seed, for a new checkout
- *   php bin/console key:generate       write a new APP_KEY into .env
- *   php bin/console theme:sync         register themes found on disk
- *   php bin/console user:promote       give an account the administrator role
- *   php bin/console routes             list every registered route
- *   php bin/console serve [host:port]  run PHP's built-in server on /public
+ * Run it with no argument for the command list, which is printed from
+ * App\Support\DocsReference::COMMANDS — the same table docs/reference/console.md
+ * is generated from, so the tool and its documentation cannot disagree.
  */
 
 declare(strict_types=1);
@@ -33,6 +27,7 @@ use App\Repositories\UserRepository;
 use App\Services\ThemeManager;
 use App\Support\Config;
 use App\Support\Database;
+use App\Support\DocsReference;
 use App\Support\Env;
 use App\Support\Migrator;
 use App\Support\Str;
@@ -263,20 +258,26 @@ switch ($command) {
 
         break;
 
+    case 'docs:reference':
+        Database::swap(connectAllowingMissingDatabase());
+        out('Regenerating the reference documentation…');
+
+        foreach ((new DocsReference())->generate() as $line) {
+            out('  ' . $line);
+        }
+
+        break;
+
     case 'help':
     default:
         out('Coldwire console');
         out('');
-        out('  migrate            apply pending migrations');
-        out('  migrate:fresh      drop every table and migrate from zero');
-        out('  db:seed            load the demo data (clears the tables it owns)');
-        out('  install            migrate:fresh + db:seed');
-        out('  key:generate       write a new APP_KEY into .env');
-        out('  theme:sync         register themes found under /templates/themes');
-        out('  maintenance:run    purge stale sessions and throttles, expire suspensions');
-        out('  user:promote NAME  give an account the administrator role');
-        out('  routes             list every registered route');
-        out('  serve [host:port]  run the built-in server on /public');
+
+        // Printed from the same table the documentation is generated from, so
+        // a new command cannot appear in one and not the other.
+        foreach (DocsReference::COMMANDS as $entry) {
+            out(sprintf('  %-22s %s', $entry['usage'], $entry['summary']));
+        }
 
         break;
 }

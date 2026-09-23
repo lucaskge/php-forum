@@ -1,0 +1,78 @@
+# ---------------------------------------------------------------------------
+# Optional. The documentation in /docs is plain Markdown and reads fine in any
+# editor or on a code host; this file only exists so it can also be built into
+# a browsable site:
+#
+#   pip install mkdocs mkdocs-material
+#   mkdocs serve
+#
+# Or with no Python on the host at all:
+#
+#   docker compose --profile docs up -d docs
+#   open http://127.0.0.1:8100
+# ---------------------------------------------------------------------------
+
+site_name: Coldwire
+site_description: A server-rendered PHP forum with no JavaScript.
+docs_dir: docs
+
+theme:
+  name: material
+  palette:
+    scheme: slate
+    primary: blue grey
+    accent: blue grey
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.superfences
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - Requirements: getting-started/requirements.md
+      - Installation: getting-started/installation.md
+      - Running the servers: getting-started/running.md
+      - First steps: getting-started/first-steps.md
+  - Using the board:
+      - Reading and searching: guide/reading-and-search.md
+      - Posting: guide/posting.md
+      - Formatting: guide/formatting.md
+      - Messages and alerts: guide/messages-and-alerts.md
+      - Chat: guide/chat.md
+      - Your account: guide/account.md
+  - Moderation:
+      - Overview and reports: moderation/index.md
+      - Topics and posts: moderation/topics-and-posts.md
+      - Members: moderation/members.md
+  - Administration:
+      - Dashboard: admin/index.md
+      - Settings: admin/settings.md
+      - Users and roles: admin/users-and-roles.md
+      - Forums: admin/forums.md
+      - Themes: admin/themes.md
+      - Chat and system: admin/system.md
+  - Architecture:
+      - Overview: architecture/overview.md
+      - Routing: architecture/routing.md
+      - Database: architecture/database.md
+      - Content pipeline: architecture/content.md
+      - Security: architecture/security.md
+  - Development:
+      - Conventions: development/conventions.md
+      - Adding a page: development/adding-a-page.md
+      - Extending the board: development/extending.md
+      - Testing: development/testing.md
+      - Troubleshooting: development/troubleshooting.md
+  - Reference:
+      - Console commands: reference/console.md
+      - Settings: reference/settings.md
+      - Permissions: reference/permissions.md
+      - Routes: reference/routes.md

@@ -1,6 +1,6 @@
 # Coldwire
 
-A forum platform written in plain PHP 8.3 with MySQL/MariaDB. Server-rendered,
+A forum platform written in plain PHP 8.1+ with MySQL/MariaDB. Server-rendered,
 traditional board layout, granular permissions, a real moderation trail — and
 **no JavaScript anywhere**. Not one `<script>` tag, not one inline handler.
 
@@ -11,8 +11,84 @@ rendered on the last request.
 
 ---
 
+## Full documentation
+
+This README is the tour. The complete documentation lives in [`docs/`](docs/) —
+installation, every screen, moderation, administration, the architecture, how to
+add a page, and a generated reference of every route, permission, setting and
+command:
+
+The files read fine as plain Markdown, starting at
+[`docs/index.md`](docs/index.md). To browse them with search and navigation,
+with nothing to install on the host:
+
+```bash
+docker compose --profile docs up -d docs
+# http://127.0.0.1:8100
+```
+
+With Python available, `pip install mkdocs mkdocs-material && mkdocs serve`
+does the same thing on port 8000.
+
+---
+
+## The two servers
+
+The board and the documentation are two containers. `make` wraps the compose
+commands so you do not have to remember them:
+
+```bash
+make            # the list of targets
+make up         # board          → http://127.0.0.1:8080
+make docs       # documentation  → http://127.0.0.1:8100
+make stop       # stop both, keep them ready
+make start      # start both again, instantly
+make status     # what is running, and on which ports
+make down       # stop and remove the containers
+```
+
+| Want to | Run | Long form |
+|---|---|---|
+| Start the board | `make up` | `docker compose up -d app` |
+| Start the docs | `make docs` | `docker compose --profile docs up -d docs` |
+| Stop just the docs | `make docs-stop` | `docker compose stop docs` |
+| Stop both, keep them | `make stop` | `docker compose --profile docs stop` |
+| Start both again | `make start` | `docker compose --profile docs start` |
+| Restart both | `make restart` | `docker compose --profile docs restart` |
+| Remove everything | `make down` | `docker compose --profile docs down` |
+| Watch the logs | `make logs` | `docker compose --profile docs logs -f` |
+
+**`stop` versus `down`.** `stop` halts the containers and keeps them, so
+`make start` is instant. `down` removes them and the network; the next `make up`
+recreates them, which takes a few seconds. Neither touches the database — that
+is your own MySQL, outside this project — and neither touches your files.
+
+> **Why the targets pass `--profile docs`.** The documentation service sits
+> behind a compose profile so it never starts with a plain `docker compose up`.
+> The catch: **`docker compose down` on its own leaves the docs container
+> running**, then fails to remove the network with `Resource is still in use`.
+> The profile has to be named for a clean sweep — `make down` does it for you.
+
+`make` also wraps the commands you run most often, each against the app
+container so no PHP on the host is needed:
+
+```bash
+make migrate                  # apply pending migrations
+make reference                # regenerate docs/reference/ from the live code
+make test                     # the suite, against the scratch database
+make console CMD="routes"     # any console command
+make shell                    # a shell inside the app container
+```
+
+Nothing is hidden: every target is one line in the [`Makefile`](Makefile) with
+the equivalent compose command beside it. With PHP on the host,
+`php bin/console serve` and `mkdocs serve` do the same two jobs without Docker.
+
+---
+
 ## Contents
 
+- [The two servers](#the-two-servers)
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Configuration](#configuration)
@@ -251,8 +327,14 @@ php bin/console theme:sync         register themes found on disk
 php bin/console user:promote NAME  give an account the administrator role
 php bin/console maintenance:run    purge stale sessions and throttles, expire suspensions
 php bin/console routes             list every route with its middleware
+php bin/console docs:reference     regenerate docs/reference/ from the live code
 php bin/console serve [host:port]  run the built-in server on /public
 ```
+
+Run it with no argument for the same list — it is printed from
+`App\Support\DocsReference::COMMANDS`, the table
+[`docs/reference/console.md`](docs/reference/console.md) is generated from, so
+the tool and its documentation cannot disagree.
 
 `php bin/console routes` is the fastest way to see what the board exposes and
 which guard protects each address.
