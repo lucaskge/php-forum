@@ -1,0 +1,359 @@
+/* ---------------------------------------------------------------------------
+   Documentation styling.
+
+   Light by default and deliberately plain: this is read for long stretches, so
+   contrast, line length and typography matter more than atmosphere. The board's
+   dark charcoal palette is right for a forum at night and wrong for a manual.
+
+   The only thing borrowed from the product is the accent — a desaturated
+   blue-grey — so the two feel related without the documentation trying to be
+   the thing it documents. The dark toggle is a comfortable dark grey, not the
+   board's near-black.
+   --------------------------------------------------------------------------- */
+
+:root {
+    --cw-accent:        #3d6285;
+    --cw-accent-quiet:  #5b7d9c;
+
+    --md-text-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --md-code-font: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/* --- light, the default -------------------------------------------------- */
+
+[data-md-color-scheme="default"] {
+    /* The header stays dark even in the light scheme. It gives the site the
+       cold, technical edge the board has, and it keeps Material's own header
+       styling intact: --md-primary-bg-color is what colours the tab labels,
+       the search icon and the toggle, so they are legible by construction
+       instead of by a per-element override. */
+    --md-primary-fg-color:          #151b22;
+    --md-primary-fg-color--light:   #232c36;
+    --md-primary-fg-color--dark:    #0e1317;
+    --md-primary-bg-color:          #e6edf3;
+    --md-primary-bg-color--light:   #93a1ae;
+
+    --md-default-bg-color:          #ffffff;
+    --md-default-fg-color:          #161d24;
+    --md-default-fg-color--light:   #4d5a66;
+    --md-default-fg-color--lighter: #7d8b97;
+
+    --md-accent-fg-color:           #0f4c75;
+
+    --md-typeset-color:             #1c242c;
+    --md-typeset-a-color:           #1a5680;
+
+    --md-code-bg-color:             #f2f5f8;
+    --md-code-fg-color:             #24303b;
+
+    --cw-line:      #dde3e9;
+    --cw-line-soft: #eef1f5;
+    --cw-panel:     #f5f8fa;
+    --cw-quiet:     #4d5a66;
+    --cw-accent-quiet: #4a7ea6;
+}
+
+/* --- dark, for anyone who prefers it ------------------------------------- */
+
+[data-md-color-scheme="slate"] {
+    --md-hue: 215;
+
+    --md-primary-fg-color:          #12171d;
+    --md-primary-bg-color:          #dbe4ec;
+    --md-primary-bg-color--light:   #8895a2;
+
+    --md-default-bg-color:          #171c22;
+    --md-default-fg-color:          #d3dbe2;
+    --md-default-fg-color--light:   #98a4af;
+    --md-default-fg-color--lighter: #6b7783;
+
+    --md-accent-fg-color:           #8fc1e8;
+
+    --md-typeset-color:             #d3dbe2;
+    --md-typeset-a-color:           #78aed6;
+
+    --md-code-bg-color:             #10151a;
+    --md-code-fg-color:             #c0cad3;
+
+    --cw-line:      #2c353e;
+    --cw-line-soft: #222a32;
+    --cw-panel:     #1e242b;
+    --cw-quiet:     #98a4af;
+    --cw-accent-quiet: #5d8cb0;
+}
+
+/* --- reading comfort ------------------------------------------------------ */
+
+.md-typeset {
+    font-size: 0.80rem;
+    line-height: 1.72;
+}
+
+.md-typeset h1 {
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    margin-bottom: 0.8em;
+}
+
+.md-typeset h2 {
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin-top: 2.2em;
+    padding-bottom: 0.3em;
+    border-bottom: 1px solid var(--cw-line);
+}
+
+.md-typeset h3 { font-weight: 600; margin-top: 1.8em; }
+
+/* Prose stays at a readable measure; tables and code may use the full width. */
+.md-typeset > p,
+.md-typeset > ul,
+.md-typeset > ol,
+.md-typeset > blockquote {
+    max-width: 44rem;
+}
+
+/* --- code ----------------------------------------------------------------- */
+
+.md-typeset code,
+.md-typeset pre > code { border-radius: 3px; }
+
+.md-typeset :not(pre) > code {
+    padding: 0.12em 0.36em;
+    border: 1px solid var(--cw-line);
+    font-size: 0.85em;
+}
+
+.md-typeset pre > code {
+    border: 1px solid var(--cw-line);
+    line-height: 1.6;
+}
+
+/* --- tables, which carry much of this documentation ----------------------- */
+
+.md-typeset table:not([class]) {
+    border: 1px solid var(--cw-line);
+    border-radius: 3px;
+    font-size: 0.76rem;
+    line-height: 1.55;
+}
+
+.md-typeset table:not([class]) th {
+    background: var(--cw-panel);
+    font-weight: 600;
+    border-bottom: 1px solid var(--cw-line);
+}
+
+.md-typeset table:not([class]) td { border-top: 1px solid var(--cw-line-soft); }
+.md-typeset table:not([class]) tr:hover { background: var(--cw-line-soft); }
+
+/* --- admonitions: flat panels with a coloured edge ------------------------ */
+
+.md-typeset .admonition,
+.md-typeset details {
+    border: 1px solid var(--cw-line);
+    border-left-width: 3px;
+    border-radius: 3px;
+    box-shadow: none;
+    font-size: 0.76rem;
+}
+
+.md-typeset .admonition-title,
+.md-typeset summary { background: var(--cw-panel); }
+
+/* --- navigation ----------------------------------------------------------- */
+
+.md-nav { font-size: 0.73rem; }
+
+.md-nav__item--section > .md-nav__link {
+    color: var(--cw-quiet);
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.md-header { box-shadow: 0 1px 0 rgba(0, 0, 0, 0.12); }
+
+.md-typeset blockquote {
+    border-left: 3px solid var(--cw-line);
+    color: var(--cw-quiet);
+}
+
+.md-typeset hr { border-bottom: 1px solid var(--cw-line); }
+
+/* ===========================================================================
+   The landing index
+   =========================================================================== */
+
+/* One card, one destination. Material's stock card grid puts a row of links in
+   the footer separated by middots, with a single arrow in front of the first —
+   which reads as if the arrow belonged to that one link, and gives the card no
+   primary target at all. Here the whole card is the link to the section's
+   first page, and the sibling pages are separate, properly sized targets
+   underneath.
+
+   Making the card clickable uses the stretched-link pattern: the title's <a>
+   grows an invisible overlay covering the card. No JavaScript, one real link
+   in the markup, and the accessible name stays the title. */
+
+.cw-index {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+    gap: 1px;
+    margin: 1.6rem 0 2.4rem;
+    background: var(--cw-line);
+    border: 1px solid var(--cw-line);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+/* A hairline grid rather than eight floating boxes: it reads as one index,
+   which is what it is. */
+.cw-card {
+    position: relative;
+    padding: 1rem 1.1rem 1.05rem;
+    background: var(--md-default-bg-color);
+    transition: background-color 120ms;
+}
+
+/* Markdown wraps the card's contents in a paragraph, so that paragraph is the
+   column — and the rule is written to hold whether it produces one block or
+   several. */
+.md-typeset .cw-card > p,
+.md-typeset .cw-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.md-typeset .cw-card p { margin: 0; }
+
+.cw-card:hover { background: var(--cw-panel); }
+
+.cw-card__kicker {
+    font-family: var(--md-code-font);
+    font-size: 0.58rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--md-default-fg-color--lighter);
+}
+
+.md-typeset .cw-card__title {
+    font-size: 0.92rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--md-default-fg-color);
+    text-decoration: none;
+}
+
+/* The overlay that makes the whole card clickable. */
+.md-typeset .cw-card__title::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+}
+
+.cw-card:hover .cw-card__title { color: var(--md-typeset-a-color); }
+
+.cw-card__body {
+    font-size: 0.73rem;
+    line-height: 1.6;
+    color: var(--cw-quiet);
+}
+
+/* Sibling pages. Above the overlay, so each is its own target, and sized to be
+   one — not a middot-separated afterthought. */
+.cw-card__more {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-top: 0.45rem;
+}
+
+.md-typeset .cw-card__more a {
+    padding: 0.16rem 0.44rem;
+    border: 1px solid var(--cw-line);
+    border-radius: 2px;
+    background: var(--cw-panel);
+    font-family: var(--md-code-font);
+    font-size: 0.62rem;
+    color: var(--cw-quiet);
+    text-decoration: none;
+    transition: color 120ms, border-color 120ms;
+}
+
+.md-typeset .cw-card__more a:hover {
+    color: var(--md-typeset-a-color);
+    border-color: var(--cw-accent-quiet);
+    background: var(--md-default-bg-color);
+}
+
+/* Keyboard users get the same focus ring the rest of the site uses. */
+.md-typeset .cw-card__title:focus-visible,
+.md-typeset .cw-card__more a:focus-visible {
+    outline: 2px solid var(--md-typeset-a-color);
+    outline-offset: 2px;
+}
+
+@media screen and (max-width: 44.98em) {
+    .cw-index { grid-template-columns: 1fr; }
+}
+
+/* ===========================================================================
+   Polish
+   =========================================================================== */
+
+/* Tabs across the header, flat rather than raised. */
+/* Tabs ride on the dark header, so they inherit its text colour. Inactive
+   ones are dimmed; the active one is full strength with a marker under it. */
+.md-tabs__link {
+    font-size: 0.72rem;
+    opacity: 0.62;
+    transition: opacity 120ms;
+}
+
+.md-tabs__link:hover { opacity: 1; }
+
+.md-tabs__item--active .md-tabs__link {
+    opacity: 1;
+    font-weight: 500;
+    box-shadow: inset 0 -2px 0 currentColor;
+}
+
+/* The search field sits on the dark header; Material colours its contents
+   from --md-primary-bg-color, so only the shape needs changing. */
+.md-search__form {
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.md-search__form:hover { background: rgba(255, 255, 255, 0.14); }
+
+/* Keyboard keys, used in the shortcuts tables. */
+.md-typeset kbd {
+    border: 1px solid var(--cw-line);
+    border-bottom-width: 2px;
+    border-radius: 3px;
+    background: var(--cw-panel);
+    box-shadow: none;
+    font-size: 0.8em;
+    padding: 0.1em 0.4em;
+}
+
+/* Footnotes and the "last updated" line: present, not shouting. */
+.md-source-file,
+.md-typeset .footnote { font-size: 0.68rem; color: var(--md-default-fg-color--lighter); }
+
+/* A checklist reads better with a little more air between items. */
+.md-typeset .task-list-item { margin-bottom: 0.2em; }
+
+/* Anchor links appear on hover rather than sitting there permanently. */
+.md-typeset .headerlink { opacity: 0; transition: opacity 120ms; }
+.md-typeset h1:hover .headerlink,
+.md-typeset h2:hover .headerlink,
+.md-typeset h3:hover .headerlink,
+.md-typeset h4:hover .headerlink,
+.md-typeset :target .headerlink { opacity: 0.4; }

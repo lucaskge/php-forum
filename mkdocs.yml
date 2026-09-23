@@ -18,21 +18,96 @@ docs_dir: docs
 
 theme:
   name: material
+  language: en
+  font:
+    text: Inter
+    code: JetBrains Mono
+  icon:
+    repo: fontawesome/brands/git-alt
   palette:
-    scheme: slate
-    primary: blue grey
-    accent: blue grey
+    # Light by default. The board is dark because a forum is read at night; a
+    # manual is read for an hour at a time, and contrast wins over atmosphere.
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue grey
+      accent: blue grey
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue grey
+      accent: blue grey
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light
   features:
+    # Top-level sections become tabs across the header, so the eight areas of
+    # the documentation are one click apart instead of a scroll apart.
+    - navigation.tabs
+    - navigation.tabs.sticky
     - navigation.sections
     - navigation.top
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.tracking
+    - navigation.indexes
+    - navigation.footer
+    - toc.follow
+    - search.highlight
+    - search.suggest
+    - search.share
     - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - content.tooltips
+
+# The board's own palette, so the two look like one product.
+extra_css:
+  - assets/coldwire.css
+
+plugins:
+  - search:
+      separator: '[\s\-,:!=\[\]()"/]+|(?!\b)(?=[A-Z][a-z])|\.(?!\d)|&[lg]t;'
+  # "Last updated" on every page. Falls back to the build date for a file that
+  # is not committed yet, so an uncommitted draft never breaks the build.
+  - git-revision-date-localized:
+      type: date
+      fallback_to_build_date: true
+      enable_creation_date: false
+  - minify:
+      minify_html: true
+
+extra:
+  generator: false
 
 markdown_extensions:
   - admonition
+  - attr_list
+  - md_in_html
   - tables
+  - footnotes
+  - def_list
   - toc:
       permalink: true
+      permalink_title: Link to this section
+  - pymdownx.details
   - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.keys
+  - pymdownx.caret
+  - pymdownx.mark
+  - pymdownx.tilde
+  - pymdownx.smartsymbols
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
 
 nav:
   - Home: index.md
@@ -69,6 +144,7 @@ nav:
       - Conventions: development/conventions.md
       - Adding a page: development/adding-a-page.md
       - Extending the board: development/extending.md
+      - Creating a theme: development/creating-a-theme.md
       - Testing: development/testing.md
       - Troubleshooting: development/troubleshooting.md
   - Reference:

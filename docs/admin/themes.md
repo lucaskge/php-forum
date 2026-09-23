@@ -70,3 +70,9 @@ back to the default. A stored setting can never inject arbitrary CSS.
 
 See [Extending the board](../development/extending.md#add-or-customise-a-theme) for the manifest
 format, template lookup order and the conventions a theme must follow.
+
+## Making your own
+
+Building or modifying a theme is a developer task, covered step by step in
+[Creating a theme](../development/creating-a-theme.md) — customising, inheriting
+from the default theme, and building one from nothing.

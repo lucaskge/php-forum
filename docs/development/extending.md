@@ -102,6 +102,8 @@ Hiding a link is presentation. The route refusing is the feature being off.
 
 ## Add or customise a theme
 
+Summarised here; the full walkthrough is [Creating a theme](creating-a-theme.md).
+
 A theme is a directory under `templates/themes/` with a `theme.json` manifest.
 Copy `default`, change the slug, and it appears in **Admin → Themes**.
 
