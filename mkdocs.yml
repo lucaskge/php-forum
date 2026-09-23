@@ -14,6 +14,11 @@
 
 site_name: Coldwire
 site_description: A server-rendered PHP forum with no JavaScript.
+
+repo_url: https://github.com/lucaskge/php-forum
+repo_name: lucaskge/php-forum
+edit_uri: edit/master/docs/
+copyright: 'Coldwire 1.0.0 &middot; <a href="https://github.com/lucaskge/php-forum">source on GitHub</a>'
 docs_dir: docs
 
 theme:
@@ -25,17 +30,18 @@ theme:
   icon:
     repo: fontawesome/brands/git-alt
   palette:
-    # Light by default. The board is dark because a forum is read at night; a
-    # manual is read for an hour at a time, and contrast wins over atmosphere.
-    - media: "(prefers-color-scheme: light)"
-      scheme: default
+    # Light, unconditionally. These entries deliberately carry no `media:` key:
+    # with one, Material follows the reader's operating system, so anyone on a
+    # dark desktop lands on the dark scheme no matter which entry comes first.
+    # The first entry with no media query is simply the default; the toggle is
+    # there for anyone who wants the other one, and their choice is remembered.
+    - scheme: default
       primary: blue grey
       accent: blue grey
       toggle:
         icon: material/weather-night
         name: Switch to dark
-    - media: "(prefers-color-scheme: dark)"
-      scheme: slate
+    - scheme: slate
       primary: blue grey
       accent: blue grey
       toggle:
@@ -61,6 +67,7 @@ theme:
     - content.code.annotate
     - content.tabs.link
     - content.tooltips
+    - content.action.edit
 
 # The board's own palette, so the two look like one product.
 extra_css:
@@ -80,6 +87,10 @@ plugins:
 
 extra:
   generator: false
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/lucaskge/php-forum
+      name: The source on GitHub
 
 markdown_extensions:
   - admonition

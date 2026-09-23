@@ -102,6 +102,9 @@ final class DocsReference
         ],
     ];
 
+    /** Where the source lives. Shown in the documentation footer. */
+    public const REPOSITORY = 'https://github.com/lucaskge/php-forum';
+
     private string $directory;
 
     public function __construct(?string $directory = null)
@@ -121,6 +124,8 @@ final class DocsReference
         }
 
         $written = [];
+
+        $written[] = $this->stampVersion();
 
         foreach ([
             'console.md' => $this->console(),
@@ -146,6 +151,41 @@ final class DocsReference
         }
 
         return $text;
+    }
+
+    /**
+     * Writes the board's version and the page count into the documentation
+     * footer, so the site says which version it describes without anyone
+     * remembering to edit two places.
+     */
+    private function stampVersion(): string
+    {
+        $config = BASE_PATH . '/mkdocs.yml';
+
+        if (!is_file($config) || !is_writable($config)) {
+            return 'mkdocs.yml not writable — footer left alone';
+        }
+
+        $version = (string) Config::get('app.version', '0.0.0');
+
+        // Version plus the source, which is the pair a reader actually wants
+        // in a footer: which release these pages describe, and where the code
+        // that produced them lives.
+        $line = sprintf(
+            'copyright: \'Coldwire %s &middot; <a href="%s">source on GitHub</a>\'',
+            $version,
+            self::REPOSITORY,
+        );
+
+        $contents = (string) file_get_contents($config);
+
+        $contents = preg_match('/^copyright:.*$/m', $contents) === 1
+            ? (string) preg_replace('/^copyright:.*$/m', $line, $contents)
+            : preg_replace('/^(site_description:.*)$/m', '$1' . "\n" . $line, $contents, 1);
+
+        file_put_contents($config, (string) $contents);
+
+        return sprintf('mkdocs.yml footer (version %s)', $version);
     }
 
     private function header(string $title, string $intro): string

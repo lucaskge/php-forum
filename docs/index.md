@@ -24,54 +24,54 @@ bug in it without asking anyone.
 
 <div class="cw-card" markdown>
 <span class="cw-card__kicker">Getting started</span>
-[Get it running](getting-started/requirements.md){ .cw-card__title }
+[:material-download:{ .cw-card__icon } Get it running](getting-started/requirements.md){ .cw-card__title }
 <span class="cw-card__body">What the server needs, the browser installer, Docker, and how to start and stop the two servers.</span>
 <span class="cw-card__more">[Installation](getting-started/installation.md) [Running the servers](getting-started/running.md)</span>
 </div>
 
 <div class="cw-card" markdown>
 <span class="cw-card__kicker">Using the board</span>
-[Run a board](guide/reading-and-search.md){ .cw-card__title }
+[:material-forum:{ .cw-card__icon } Run a board](guide/reading-and-search.md){ .cw-card__title }
 <span class="cw-card__body">Reading, posting, formatting, messages, alerts and chat — then the moderation queue and the tools behind it.</span>
 <span class="cw-card__more">[Posting](guide/posting.md) [Moderation](moderation/index.md)</span>
 </div>
 
 <div class="cw-card" markdown>
 <span class="cw-card__kicker">Administration</span>
-[Configure it](admin/index.md){ .cw-card__title }
+[:material-tune-variant:{ .cw-card__icon } Configure it](admin/index.md){ .cw-card__title }
 <span class="cw-card__body">Every administration screen: settings, roles and permissions, forums, themes, chat and system maintenance.</span>
 <span class="cw-card__more">[Settings](admin/settings.md) [Users and roles](admin/users-and-roles.md)</span>
 </div>
 
 <div class="cw-card" markdown>
 <span class="cw-card__kicker">Architecture</span>
-[Understand it](architecture/overview.md){ .cw-card__title }
+[:material-sitemap:{ .cw-card__icon } Understand it](architecture/overview.md){ .cw-card__title }
 <span class="cw-card__body">The request lifecycle, the routing modes, the schema, the content pipeline and every security measure with the file it lives in.</span>
 <span class="cw-card__more">[Routing](architecture/routing.md) [Database](architecture/database.md) [Security](architecture/security.md)</span>
 </div>
 
 <div class="cw-card" markdown>
 <span class="cw-card__kicker">Development</span>
-[Change it](development/conventions.md){ .cw-card__title }
+[:material-code-braces:{ .cw-card__icon } Change it](development/conventions.md){ .cw-card__title }
 <span class="cw-card__body">The conventions, a full worked example of adding a page, extending the markup and permissions, and writing tests.</span>
 <span class="cw-card__more">[Adding a page](development/adding-a-page.md) [Testing](development/testing.md)</span>
 </div>
 
 <div class="cw-card" markdown>
 <span class="cw-card__kicker">Development</span>
-[Restyle it](development/creating-a-theme.md){ .cw-card__title }
+[:material-palette-outline:{ .cw-card__icon } Restyle it](development/creating-a-theme.md){ .cw-card__title }
 <span class="cw-card__body">Customise the colours from a form, inherit from the default theme, or build one from nothing.</span>
 </div>
 
 <div class="cw-card" markdown>
 <span class="cw-card__kicker">Development</span>
-[Fix it](development/troubleshooting.md){ .cw-card__title }
+[:material-bug-outline:{ .cw-card__icon } Fix it](development/troubleshooting.md){ .cw-card__title }
 <span class="cw-card__body">Symptoms, causes and fixes — most of them bugs this project actually hit.</span>
 </div>
 
 <div class="cw-card" markdown>
 <span class="cw-card__kicker">Reference</span>
-[Look something up](reference/routes.md){ .cw-card__title }
+[:material-book-open-variant:{ .cw-card__icon } Look something up](reference/routes.md){ .cw-card__title }
 <span class="cw-card__body">Generated from the running code by a console command, so it cannot drift from the implementation.</span>
 <span class="cw-card__more">[Permissions](reference/permissions.md) [Settings](reference/settings.md) [Console](reference/console.md)</span>
 </div>

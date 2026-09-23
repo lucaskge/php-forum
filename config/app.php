@@ -6,6 +6,12 @@ use App\Support\Env;
 
 return [
     'name' => Env::get('APP_NAME', 'Coldwire'),
+
+    // The board's own version. Single source: the admin system screen and the
+    // documentation footer both read it from here, the latter through
+    // `php bin/console docs:reference`.
+    'version' => '1.0.0',
+
     'env' => Env::get('APP_ENV', 'production'),
     'debug' => Env::bool('APP_DEBUG', false),
     'url' => rtrim((string) Env::get('APP_URL', 'http://localhost:8080'), '/'),
